@@ -1,7 +1,7 @@
 /* ============================================================
-   WILD NATION / WILD SOJA — SITE + PRICING CONFIG
-   Edit this file to change your prices, contact info and how
-   booking requests reach you. No other code changes needed.
+   WILD SOJA: DJ BOOKING SETTINGS
+   Clients never see prices. These numbers are used to work out the
+   suggested quote you see in /admin for each booking request.
    ============================================================ */
 (typeof window !== "undefined" ? window : globalThis).WN_CONFIG = {
   brand: {
@@ -10,69 +10,72 @@
     email: "wildnationgta@gmail.com",
     phone: "+1 (365) 366-7490",
     instagram: "wld.ntn",
-    city: "Hamilton, Toronto & Niagara",
+    homeBase: "Hamilton",
   },
 
-  /* Booking requests are saved by the server and show up in /admin.
-     Set OWNER_EMAIL on the server to also get an email for each one. */
   formEndpoint: "/api/bookings",
-
   currency: "CAD",
-  depositPercent: 30,          // % deposit to lock the date
-  includedHours: 4,            // hours included in each base price
 
-  /* Base price per event type (includes `includedHours` of DJ time). */
-  eventTypes: {
-    wedding:   { label: "Wedding",                 base: 1200, hourly: 200 },
-    corporate: { label: "Corporate / Brand event", base: 1000, hourly: 175 },
-    private:   { label: "Private party",           base: 600,  hourly: 125 },
-    birthday:  { label: "Birthday / Sweet 16",     base: 550,  hourly: 125 },
-    school:    { label: "School / Prom / Formal",  base: 800,  hourly: 150 },
-    club:      { label: "Club / Bar / Lounge",     base: 400,  hourly: 100 },
-    festival:  { label: "Festival / Concert",      base: 1500, hourly: 250 },
-    other:     { label: "Something else",          base: 700,  hourly: 150 },
-  },
-
-  /* Extra cost based on guest count (bigger crowd = bigger rig). */
-  guestTiers: [
-    { max: 75,       add: 0,   label: "Up to 75" },
-    { max: 150,      add: 100, label: "76 – 150" },
-    { max: 300,      add: 250, label: "151 – 300" },
-    { max: 600,      add: 450, label: "301 – 600" },
-    { max: Infinity, add: 750, label: "600+" },
-  ],
-
-  /* Optional add-ons the client can tick. */
-  addOns: {
-    sound:     { label: "Full sound system (PA + subs)", price: 250, note: "Skip if the venue has house sound" },
-    lighting:  { label: "Dance floor lighting",          price: 200 },
-    uplight:   { label: "Venue uplighting (12 fixtures)",price: 300 },
-    mc:        { label: "MC / hosting & announcements",  price: 150 },
-    mic:       { label: "Extra wireless mic",            price: 50 },
-    ceremony:  { label: "Ceremony audio setup",          price: 250, note: "Weddings: separate area for vows" },
-    sparks:    { label: "Cold spark machines (pair)",    price: 400 },
-    haze:      { label: "Fog / haze",                    price: 75 },
-    edits:     { label: "Custom intro / entrance edits", price: 100 },
-  },
-
-  /* Travel zones measured from home base. */
-  travelZones: {
-    local:  { label: "Local (under 40 km)", add: 0 },
-    near:   { label: "40 – 80 km",          add: 100 },
-    far:    { label: "80 – 160 km",         add: 225 },
-    travel: { label: "160+ km / out of province", add: null }, // null = custom quote
-  },
-
-  /* Date-based adjustments (percent of subtotal). */
-  surcharges: {
-    weekendPercent: 10,  // Friday & Saturday
-    rushPercent: 15,     // booked less than rushDays out
-    rushDays: 14,
-    holidayPercent: 50,  // dates listed below
-    holidays: ["12-31", "12-24", "12-25", "07-04", "10-31"], // MM-DD
-  },
-
+  /* ---- DJ rate ---- */
+  hourlyRate: 100,         // $ per hour (4 hours = $400)
+  defaultHours: 4,
   minimumHours: 2,
-  maximumHours: 12,
+  maximumHours: 10,
+  referralDiscount: 50,    // $ off when the client was referred (4 hours: $400 → $350)
+
+  /* ---- Travel from Hamilton ----
+     Charge = round-trip km × cost per km, rounded UP to the nearest `roundTo`.
+     Cost per km = fuel (price × litres per 100 km ÷ 100) + wear on the vehicle.
+     At $1.60/L and 11 L/100 km: 17.6¢ fuel + 5¢ wear ≈ 22.6¢/km.
+     Update `fuelPrice` when gas changes. */
+  travel: {
+    fuelPrice: 1.60,        // $ per litre
+    litresPer100km: 11,     // loaded vehicle with DJ gear
+    wearPerKm: 0.05,        // tires, maintenance, depreciation
+    roundTo: 5,
+    // One-way driving distance from central Hamilton (km). `extra` = parking/traffic.
+    cities: [
+      { name: "Hamilton (incl. Stoney Creek, Ancaster, Dundas, Waterdown)", km: 0 },
+      { name: "Burlington", km: 18 },
+      { name: "Caledonia", km: 22 },
+      { name: "Grimsby", km: 33 },
+      { name: "Oakville", km: 35 },
+      { name: "Milton", km: 35 },
+      { name: "Brantford", km: 40 },
+      { name: "Lincoln / Beamsville", km: 40 },
+      { name: "Cambridge", km: 45 },
+      { name: "Guelph", km: 50 },
+      { name: "Mississauga", km: 50 },
+      { name: "St. Catharines", km: 52 },
+      { name: "Toronto: Etobicoke", km: 55, extra: 15 },
+      { name: "Kitchener / Waterloo", km: 60 },
+      { name: "Brampton", km: 60 },
+      { name: "Welland", km: 65 },
+      { name: "Toronto: Downtown / Midtown", km: 70, extra: 15 },
+      { name: "Niagara-on-the-Lake", km: 70 },
+      { name: "Niagara Falls", km: 72 },
+      { name: "Vaughan", km: 75 },
+      { name: "Toronto: North York", km: 80, extra: 15 },
+      { name: "Fort Erie", km: 90 },
+      { name: "Toronto: Scarborough", km: 90, extra: 15 },
+      { name: "Markham / Richmond Hill", km: 95 },
+      { name: "Somewhere else", km: null }, // you quote travel yourself
+    ],
+  },
+
+  eventTypes: {
+    wedding: { label: "Wedding" },
+    birthday: { label: "Birthday party" },
+    private: { label: "Private / house party" },
+    corporate: { label: "Corporate event" },
+    club: { label: "Club, bar or lounge" },
+    school: { label: "School, prom or formal" },
+    community: { label: "Church or community event" },
+    festival: { label: "Festival or concert" },
+    other: { label: "Something else" },
+  },
+
+  /* Extras the client can ask about (no prices shown; you quote them). */
+  extras: ["Sound system", "Lighting", "MC / hosting", "Wireless mic"],
 };
 if (typeof module !== "undefined") module.exports = globalThis.WN_CONFIG || window.WN_CONFIG;

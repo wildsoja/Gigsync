@@ -202,17 +202,39 @@ app.get("/api/posts/:slug", (req, res) => {
 });
 
 app.post("/api/bookings", (req, res) => {
-  const v = req.body || {};
-  if (v._gotcha) return res.json({ ok: true });
-  if (!clean(v.name) || !isEmail(clean(v.email)) || !BOOKING.eventTypes[v.type]) return res.status(400).json({ error: "Missing details" });
-  const addOns = Array.isArray(v.addOnKeys) ? v.addOnKeys : [];
-  const quote = Pricing.calculate(BOOKING, { ...v, addOns }); // recompute: never trust client totals
-  const ref = clean(v.reference, 40) || "WN-" + T.randomCode(6);
-  const data = { ...v, estimate: quote };
-  q.run(`INSERT OR IGNORE INTO bookings (ref, name, email, phone, event_type, event_date, estimate_cents, data) VALUES (?,?,?,?,?,?,?,?)`,
-    ref, clean(v.name), clean(v.email), clean(v.phone), BOOKING.eventTypes[v.type].label, clean(v.date, 20), Math.round(quote.total * 100), JSON.stringify(data));
-  audience.upsertContact({ email: v.email, name: v.name, phone: v.phone, source: "booking", impliedMonths: 6, optOut: !!v.noUpdates });
-  mail.notifyOwner(`🎧 New booking request ${ref}: ${BOOKING.eventTypes[v.type].label} on ${clean(v.date, 20)}`, clean(v.summary, 8000) || JSON.stringify(data, null, 2));
+  const b = req.body || {};
+  if (b._gotcha) return res.json({ ok: true });
+  if (!clean(b.name) || !isEmail(clean(b.email)) || !BOOKING.eventTypes[b.type]) return res.status(400).json({ error: "Please fill in your name, email and event type" });
+  const cities = BOOKING.travel.cities.map((c) => c.name);
+  const v = {
+    type: b.type, date: clean(b.date, 10), startTime: clean(b.startTime, 5), hours: clean(b.hours, 3), guests: clean(b.guests, 6),
+    city: cities.includes(b.city) ? b.city : "", location: clean(b.location, 200), venue: clean(b.venue, 200),
+    extras: (Array.isArray(b.extras) ? b.extras : []).filter((x) => BOOKING.extras.includes(x)),
+    name: clean(b.name, 120), phone: clean(b.phone, 40), email: clean(b.email, 200), contactPref: clean(b.contactPref, 20),
+    referral: clean(b.referral, 120), notes: clean(b.notes, 4000),
+  };
+  const quote = Pricing.calculate(BOOKING, v); // suggested quote, only shown to you
+  const ref = "WS-" + T.randomCode(6);
+  const label = BOOKING.eventTypes[v.type].label;
+  q.run(`INSERT INTO bookings (ref, name, email, phone, event_type, event_date, estimate_cents, data) VALUES (?,?,?,?,?,?,?,?)`,
+    ref, v.name, v.email, v.phone, label, v.date, Math.round((quote.referred ? quote.referralTotal : quote.total) * 100), JSON.stringify({ ...v, estimate: quote }));
+  audience.upsertContact({ email: v.email, name: v.name, phone: v.phone, source: "booking", impliedMonths: 6, optOut: !!b.noUpdates });
+  const where = v.city && !quote.custom ? v.city : v.location || v.city || "?";
+  mail.notifyOwner(`🎧 Booking request: ${label}, ${v.date}, ${where}`, [
+    `${v.name} · ${v.phone} · ${v.email} (prefers ${v.contactPref || "any"})`,
+    `${label} on ${v.date}${v.startTime ? " at " + v.startTime : ""}, ${quote.hours} hrs, ~${v.guests || "?"} guests`,
+    `Where: ${where}${v.venue ? " · " + v.venue : ""}`,
+    v.extras.length ? `Extras: ${v.extras.join(", ")}` : "",
+    v.referral ? `Referred by: ${v.referral}` : "",
+    v.notes ? `Notes: ${v.notes}` : "",
+    "",
+    "SUGGESTED QUOTE",
+    ...quote.lines.map((l) => `${l.label}: $${l.amount}`),
+    `Total: $${quote.total}${quote.custom ? " + travel (quote it yourself)" : ""}`,
+    quote.referred ? `Referral price: $${quote.referralTotal}` : "",
+    "",
+    `Ref ${ref}. Reply from /admin → DJ bookings.`,
+  ].filter((x) => x !== "").join("\n"));
   res.json({ ok: true, ref });
 });
 

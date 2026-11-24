@@ -89,11 +89,20 @@ test("order page needs the secret key; admin API needs sign-in", async () => {
   assert.equal((await fetch(base + "/api/admin/summary", { headers: { cookie } })).status, 200);
 });
 
-test("booking estimate is recomputed on the server", async () => {
-  const r = await post("/api/bookings", { name: "X", email: "x@x.co", type: "wedding", hours: "4", guests: "50", travel: "local", date: "2099-03-03", addOnKeys: ["mc"], estimateTotal: "$1" });
+test("DJ quote: $100/hr, travel from Hamilton by city, referral discount", async () => {
+  const C = require("../public/assets/js/booking-config.js"), P = require("../public/assets/js/pricing.js");
+  const quote = (city, extra = {}) => P.calculate(C, { type: "birthday", hours: 4, city, ...extra });
+  assert.equal(quote("Hamilton (incl. Stoney Creek, Ancaster, Dundas, Waterdown)").total, 400);
+  assert.equal(quote("St. Catharines").travel.charge, 25);
+  assert.equal(quote("Toronto: Downtown / Midtown").travel.charge, 50);
+  assert.equal(quote("Somewhere else").custom, true);
+  assert.equal(quote("Hamilton (incl. Stoney Creek, Ancaster, Dundas, Waterdown)", { referral: "Kemi" }).referralTotal, 350);
+
+  const r = await post("/api/bookings", { name: "X", email: "x@x.co", phone: "905", type: "wedding", hours: "4", city: "St. Catharines", date: "2099-03-03", referral: "Kemi" });
   assert.equal(r.status, 200);
-  const b = q.get(`SELECT estimate_cents FROM bookings ORDER BY id DESC LIMIT 1`);
-  assert.equal(b.estimate_cents, 135000); // 1200 base + 150 MC, Tuesday, no surcharges
+  const b = q.get(`SELECT estimate_cents, data FROM bookings ORDER BY id DESC LIMIT 1`);
+  assert.equal(b.estimate_cents, 37500); // 400 + 25 travel − 50 referral
+  assert.equal(JSON.parse(b.data).estimate.total, 425);
 });
 
 test("blog: drafts are hidden, posts need admin to create", async () => {

@@ -26,6 +26,7 @@ a{color:inherit}
 img{max-width:100%;display:block}
 ::selection{background:var(--lime);color:#000}
 .wrap{max-width:var(--max);margin:0 auto;padding:0 20px}
+[hidden]{display:none !important}
 .sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
 .lime{color:var(--lime)} .muted{color:var(--muted)}
 .mono{font-family:var(--mono)}
@@ -474,3 +475,13 @@ input[type=range]{padding:0;border:0;background:transparent;accent-color:var(--l
 .prose .audio iframe{width:100%;border:0;display:block}
 .post-row .thumb{position:relative}
 .post-row .play{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);z-index:1;width:46px;height:46px;border-radius:50%;background:rgba(214,251,81,.92);color:#000;display:grid;place-items:center;font-size:16px;box-shadow:0 6px 20px rgba(0,0,0,.4)}
+.book-form{padding:clamp(22px,4vw,40px)}
+.form-h{font-family:var(--display);font-weight:400;text-transform:uppercase;font-size:26px;margin:28px 0 14px;letter-spacing:.02em}
+.form-h:first-child{margin-top:0}
+.extras{display:flex;flex-wrap:wrap;gap:10px}
+.extra{position:relative}
+.extra input{position:absolute;opacity:0;pointer-events:none}
+.extra span{display:inline-block;padding:10px 16px;border:1px solid var(--line-2);border-radius:999px;cursor:pointer;font-size:14px;font-weight:600;background:rgba(0,0,0,.3);transition:all .15s}
+.extra input:checked + span{border-color:var(--lime);background:rgba(214,251,81,.1);color:var(--lime)}
+.extra input:focus-visible + span{box-shadow:0 0 0 3px rgba(214,251,81,.25)}
+.book-form .btn.block{margin-top:22px}

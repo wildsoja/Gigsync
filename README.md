@@ -12,7 +12,7 @@ Website, DJ booking quotes and a built-in ticketing system for **Wild Nation Eve
 | `/blog` | Blog in a list layout: latest post featured, then dated rows with filters by city |
 | `/blog/<post>` | A single post |
 | `/wildsoja` | DJ page with services and prices |
-| `/book` | DJ booking form with a live price estimate (**send this link to clients**) |
+| `/book` | Simple DJ booking form, no prices shown (**send this link to clients**). You get a suggested quote in `/admin` |
 | `/contact` | Contact form |
 | `/admin` | Your dashboard: events, ticket sales, attendees, comp tickets, DJ bookings, audience & email updates, blog posts, messages |
 | `/admin/scan` | Door scanner. Open on a phone, point the camera at tickets |
@@ -67,7 +67,12 @@ Back up `DATA_DIR` (`wildnation.db`, `secret.key`, `uploads/`). If `secret.key` 
 
 ## Change things
 
-- **DJ prices, add-ons, travel fees, deposit:** `public/assets/js/booking-config.js`
+- **DJ rate, referral discount, gas price, travel cities:** `public/assets/js/booking-config.js`
+
+### How DJ quotes are worked out (only you see them)
+- $100/hour (4 hours = $400). If the client says they were referred, a $50 referral price is shown too (4 hours = $350).
+- Travel from Hamilton: round-trip km × (gas $1.60/L × 11 L/100 km + 5¢/km wear) ≈ 23¢/km, rounded up to the nearest $5. Toronto areas add $15 for parking/traffic. Hamilton itself is free. Examples: Burlington $10, St. Catharines $25, Niagara Falls $35, downtown Toronto $50. Change `fuelPrice` when gas moves.
+- In `/admin` → DJ bookings, each request shows the breakdown and a ready-to-send message. Edit it if you like, then tap **Text quote** or **Email quote**.
 - **Blog posts & past-event recaps:** write and edit them in `/admin` → Blog. The 9 original recaps are loaded as posts on first run. Posts support headings, **bold**, links, images, pull quotes and YouTube embeds (paste the link on its own line).
 - **Contact info / socials:** top of `public/assets/js/site.js`
 - **Colours & fonts:** top of `public/assets/css/site.css`

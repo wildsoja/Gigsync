@@ -8,130 +8,68 @@
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Anton&family=JetBrains+Mono:wght@500&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/assets/css/site.css">
-
-<title>Book DJ Wild Soja | Instant Quote</title>
-<meta name="description" content="Tell us about your event and get an instant price estimate from DJ Wild Soja and Wild Nation Events.">
+<title>Book DJ Wild Soja | Request a Quote</title>
+<meta name="description" content="Book DJ Wild Soja for your wedding, birthday, corporate event or party in Hamilton, Toronto, Niagara and nearby. Tell us about your event and get a quote.">
 </head>
-<body class="booking" data-page="wildsoja">
+<body data-page="wildsoja">
 <header class="page-head" style="padding-bottom:30px">
   <div class="bgimg"></div><div class="glow m" style="width:380px;height:380px;right:-100px;top:60px"></div>
   <div class="wrap">
     <span class="eyebrow">Wild Soja · Booking</span>
-    <h1 class="display h-lg" style="margin-top:14px">Book your <span class="lime">event</span></h1>
-    <p class="lead">Fill in the details and your price updates as you go. Sending a request is free. We'll confirm availability and send your final quote, usually within 24 hours.</p>
+    <h1 class="display h-lg" style="margin-top:14px">Book <span class="lime">Wild Soja</span></h1>
+    <p class="lead">Tell us about your event. It takes about a minute, and we'll get back to you with your quote, usually within 24 hours.</p>
   </div>
 </header>
-<div class="wrap">
-  <div class="book-layout">
-    <div>
-      <form id="booking" novalidate>
-        <fieldset>
-          <legend>Your details</legend>
-          <div class="row">
-            <div class="field"><label for="name">Full name <span class="req">*</span></label><input id="name" name="name" autocomplete="name" required><span class="err">Please enter your name</span></div>
-            <div class="field"><label for="email">Email <span class="req">*</span></label><input id="email" name="email" type="email" autocomplete="email" required><span class="err">Please enter a valid email</span></div>
-          </div>
-          <div class="row">
-            <div class="field"><label for="phone">Phone <span class="req">*</span></label><input id="phone" name="phone" type="tel" autocomplete="tel" required><span class="err">Please enter a phone number</span></div>
-            <div class="field"><label for="contactPref">Best way to reach you</label>
-              <select id="contactPref" name="contactPref"><option>Text</option><option>Call</option><option>Email</option><option>Instagram DM</option></select></div>
-          </div>
-        </fieldset>
 
-        <fieldset>
-          <legend>The event</legend>
-          <div class="field">
-            <label>Event type <span class="req">*</span></label>
-            <div class="chips" id="eventTypes"></div>
-            <span class="err">Pick an event type</span>
-          </div>
-          <div class="row three" style="margin-top:14px">
-            <div class="field"><label for="date">Event date <span class="req">*</span></label><input id="date" name="date" type="date" required><span class="err">Pick a future date</span></div>
-            <div class="field"><label for="startTime">Start time <span class="req">*</span></label><input id="startTime" name="startTime" type="time" required><span class="err">Add a start time</span></div>
-            <div class="field"><label for="guests">Guest count <span class="req">*</span></label><input id="guests" name="guests" type="number" min="1" inputmode="numeric" placeholder="e.g. 120" required><span class="err">Estimated guests</span></div>
-          </div>
-          <div class="field">
-            <label for="hours">DJ hours</label>
-            <div class="range-wrap"><input id="hours" name="hours" type="range" step="0.5"><span class="range-val" id="hoursVal">4</span></div>
-            <span class="hint" id="hoursHint"></span>
-          </div>
-          <div class="field"><label for="eventName">Event name or occasion</label><input id="eventName" name="eventName" placeholder="e.g. Maya &amp; Chris's Wedding, Acme Holiday Party"></div>
-        </fieldset>
-
-        <fieldset>
-          <legend>Venue</legend>
-          <div class="row">
-            <div class="field"><label for="venue">Venue name</label><input id="venue" name="venue" placeholder="TBD is fine"></div>
-            <div class="field"><label for="location">City / address <span class="req">*</span></label><input id="location" name="location" required><span class="err">Where is it?</span></div>
-          </div>
-          <div class="row">
-            <div class="field"><label for="setting">Setting</label>
-              <select id="setting" name="setting"><option>Indoor</option><option>Outdoor</option><option>Both / not sure</option></select></div>
-            <div class="field"><label for="travel">Distance from us <span class="req">*</span></label><select id="travel" name="travel" required></select></div>
-          </div>
-          <div class="field"><label for="loadIn">Load-in notes</label><input id="loadIn" name="loadIn" placeholder="Stairs, elevator, parking, power, noise curfew..."></div>
-        </fieldset>
-
-        <fieldset>
-          <legend>Add-ons <small>optional</small></legend>
-          <div class="addons" id="addons"></div>
-        </fieldset>
-
-        <fieldset>
-          <legend>The vibe <small>optional</small></legend>
-          <div class="field"><label for="genres">Genres &amp; energy</label><input id="genres" name="genres" placeholder="e.g. Afrobeats, hip-hop, R&amp;B, house, throwbacks..."></div>
-          <div class="row">
-            <div class="field"><label for="mustPlay">Must-play songs</label><textarea id="mustPlay" name="mustPlay"></textarea></div>
-            <div class="field"><label for="doNotPlay">Do-not-play</label><textarea id="doNotPlay" name="doNotPlay"></textarea></div>
-          </div>
-          <div class="row">
-            <div class="field"><label for="budget">Budget range</label>
-              <select id="budget" name="budget"><option value="">Prefer not to say</option><option>Under $750</option><option>$750 – $1,500</option><option>$1,500 – $3,000</option><option>$3,000+</option></select></div>
-            <div class="field"><label for="referral">How did you hear about us?</label>
-              <select id="referral" name="referral"><option value="">Select</option><option>Instagram</option><option>TikTok</option><option>Saw a live set</option><option>Friend / referral</option><option>Venue / planner</option><option>Google</option><option>Other</option></select></div>
-          </div>
-          <div class="field"><label for="notes">Anything else?</label><textarea id="notes" name="notes" placeholder="Timeline, special moments, cultural traditions, questions..."></textarea></div>
-          <p class="hint" style="margin:14px 0 0">We'll also send you occasional Wild Nation event updates. <label class="optout"><input type="checkbox" name="noUpdates" value="1"> No thanks</label></p>
-        </fieldset>
-        <input type="text" name="_gotcha" style="display:none" tabindex="-1" autocomplete="off">
-      </form>
-
-      <div class="success" id="success">
-        <div class="check-burst">✓</div>
-        <h2>Request sent</h2>
-        <p id="successMsg">Thanks! We've got your details and will confirm availability and your final quote shortly.</p>
-        <div class="ref" id="refNum"></div>
-        <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap">
-          <button class="btn ghost" type="button" onclick="window.print()">Save / print quote</button>
-          <a class="btn" href="/">Back to site</a>
-        </div>
-      </div>
+<div class="wrap" style="max-width:760px;padding-bottom:90px">
+  <form id="booking" class="card book-form" novalidate>
+    <h2 class="form-h">Your event</h2>
+    <div class="row2">
+      <div class="field"><label for="type">Event type <span class="req">*</span></label><select id="type" name="type" required><option value="">Choose one</option></select><span class="err">Choose an event type</span></div>
+      <div class="field"><label for="date">Date <span class="req">*</span></label><input id="date" name="date" type="date" required><span class="err">Pick a date</span></div>
     </div>
+    <div class="row2">
+      <div class="field"><label for="startTime">Start time</label><input id="startTime" name="startTime" type="time"></div>
+      <div class="field"><label for="hours">How long?</label><select id="hours" name="hours"></select></div>
+    </div>
+    <div class="row2">
+      <div class="field"><label for="city">City <span class="req">*</span></label><select id="city" name="city" required><option value="">Choose a city</option></select><span class="err">Choose a city</span></div>
+      <div class="field"><label for="guests">Guests (roughly)</label><input id="guests" name="guests" type="number" min="1" inputmode="numeric" placeholder="e.g. 80"></div>
+    </div>
+    <div class="field" id="otherCity" hidden><label for="location">Where is it?</label><input id="location" name="location" placeholder="City or address"></div>
+    <div class="field"><label for="venue">Venue</label><input id="venue" name="venue" placeholder="Venue name or address (TBD is fine)"></div>
 
-    <aside class="quote" id="quote" aria-live="polite">
-      <h2>Your estimate</h2>
-      <p class="sub" id="quoteSub">Updates as you fill out the form</p>
-      <ul class="lines" id="lines"></ul>
-      <div class="total"><span>Estimated total</span><b id="total">$0</b></div>
-      <div class="deposit"><span id="depositLabel">Deposit to book</span><span id="deposit">$0</span></div>
-      <div class="custom-flag" id="customFlag">Travel over 160 km is quoted separately. We'll add travel to your final quote.</div>
-      <button class="btn" type="submit" form="booking" id="submitBtn">Send booking request</button>
-      <p class="notice">This is an estimate based on what you've entered. Your final price is confirmed after we check availability and event details.</p>
-    </aside>
+    <h2 class="form-h">Anything extra?</h2>
+    <div class="extras" id="extras"></div>
+
+    <h2 class="form-h">Your details</h2>
+    <div class="row2">
+      <div class="field"><label for="name">Name <span class="req">*</span></label><input id="name" name="name" autocomplete="name" required><span class="err">Please enter your name</span></div>
+      <div class="field"><label for="phone">Phone <span class="req">*</span></label><input id="phone" name="phone" type="tel" autocomplete="tel" required><span class="err">Please enter a phone number</span></div>
+    </div>
+    <div class="row2">
+      <div class="field"><label for="email">Email <span class="req">*</span></label><input id="email" name="email" type="email" autocomplete="email" required><span class="err">Please enter a valid email</span></div>
+      <div class="field"><label for="contactPref">Best way to reach you</label><select id="contactPref" name="contactPref"><option>Text</option><option>Call</option><option>Email</option><option>Instagram DM</option></select></div>
+    </div>
+    <div class="field"><label for="referral">Were you referred? <span class="hint" style="font-weight:400">Tell us who sent you</span></label><input id="referral" name="referral" placeholder="Name of the person or venue (optional)"></div>
+    <div class="field"><label for="notes">Anything else we should know?</label><textarea id="notes" name="notes" placeholder="Music you love, special moments, questions…"></textarea></div>
+    <input type="text" name="_gotcha" style="display:none" tabindex="-1" autocomplete="off">
+    <button class="btn lg block" id="submitBtn">Request a quote</button>
+    <p class="hint" style="margin:12px 0 0;text-align:center">No payment now. We'll also send you occasional Wild Nation event updates. <label class="optout"><input type="checkbox" name="noUpdates" value="1"> No thanks</label></p>
+    <div class="form-msg err" id="formErr"></div>
+  </form>
+
+  <div class="success" id="success">
+    <div class="check-burst">✓</div>
+    <h2>Request sent</h2>
+    <p id="successMsg">Thanks! We'll check the date and get back to you with your quote, usually within 24 hours.</p>
+    <div class="ref" id="refNum"></div>
+    <p style="margin-top:6px"><a class="btn" href="/">Back to the site</a></p>
   </div>
 </div>
-
-
-</div>
-<div class="mobile-total" id="mobileTotal">
-  <div><small>Estimated total</small><b id="mTotal">$0</b></div>
-  <a class="btn sm" href="#quote">Review &amp; send</a>
-</div>
-
 
 <script src="/assets/js/site.js"></script>
 <script src="/assets/js/booking-config.js"></script>
-<script src="/assets/js/pricing.js"></script>
 <script src="/assets/js/book.js"></script>
 </body>
 </html>

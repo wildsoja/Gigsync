@@ -269,24 +269,57 @@
   // ---------- Bookings ----------
   async function bookings() {
     const list = await api("/api/admin/bookings");
-    const fields = [["Date", "date"], ["Start", "startTime"], ["Hours", "hours"], ["Guests", "guests"], ["Venue", "venue"], ["Location", "location"], ["Setting", "setting"],
-      ["Load-in", "loadIn"], ["Add-ons", "addOns"], ["Genres", "genres"], ["Must-play", "mustPlay"], ["Do-not-play", "doNotPlay"], ["Budget", "budget"], ["Heard via", "referral"], ["Notes", "notes"], ["Prefers", "contactPref"]];
+    const fields = [["Date", "date"], ["Start", "startTime"], ["Hours", "hours"], ["Guests", "guests"], ["City", "city"], ["Location", "location"], ["Venue", "venue"],
+      ["Extras", "extras"], ["Referred by", "referral"], ["Notes", "notes"], ["Prefers", "contactPref"],
+      // older requests (before the form was simplified)
+      ["Add-ons", "addOns"], ["Genres", "genres"], ["Must-play", "mustPlay"], ["Do-not-play", "doNotPlay"], ["Budget", "budget"]];
+    const show = (v) => Array.isArray(v) ? v.join(", ") : v;
+    const quoteText = (b) => {
+      const e = b.data.estimate, first = (b.name || "").split(/\s+/)[0];
+      if (!e || !e.lines) return "";
+      const price = e.referred ? e.referralTotal : e.total;
+      return `Hi ${first}, thanks for reaching out about your ${b.event_type.toLowerCase()} on ${b.event_date}! ` +
+        `For ${e.hours} hours of DJ${e.travel && e.travel.charge ? ", including travel" : ""}, it's $${price}${e.custom ? " plus travel" : ""}` +
+        `${e.referred ? " (with your referral discount)" : ""}. Let me know if you'd like to lock in the date. - Wild Soja`;
+    };
     shell("bookings", `
       <div class="top"><h1 class="t">DJ bookings</h1><span class="muted">${list.length} request${list.length === 1 ? "" : "s"}</span></div>
-      ${list.length ? list.map((b) => `<details class="bk"><summary>
-          <div><b>${esc(b.name)}</b> · ${esc(b.event_type)} · ${esc(b.event_date)}<br><span class="muted" style="font-size:13px">${esc(b.ref)} · received ${fmtDate(b.created_at)}</span></div>
+      ${list.length ? list.map((b) => {
+        const e = b.data.estimate || {}, msg = quoteText(b), phone = String(b.phone || "").replace(/[^\d+]/g, "");
+        const quoteHtml = e.lines ? `<div><span>Suggested quote</span><span>${e.lines.map((l) => `${esc(l.label)}: <b>$${l.amount}</b>`).join("<br>")}
+            <br><b class="lime" style="font-size:18px">Total $${e.total}${e.custom ? " + travel (you set it)" : ""}</b>
+            ${e.referred ? `<br><b class="lime">Referral price $${e.referralTotal}</b> <span class="muted">($${e.total} − referral discount)</span>` : ""}
+            ${e.travel && e.travel.charge ? `<br><span class="muted" style="font-size:12px">Travel: ${e.travel.roundTripKm} km × $${e.travel.perKm}/km = $${e.travel.raw}, rounded up${e.travel.city.extra ? `, + $${e.travel.city.extra} parking/traffic` : ""}</span>` : ""}</span></div>` : "";
+        return `<details class="bk"><summary>
+          <div><b>${esc(b.name)}</b> · ${esc(b.event_type)} · ${esc(b.event_date)}${b.data.city ? ` · ${esc(b.data.city.split(" (")[0])}` : ""}<br><span class="muted" style="font-size:13px">${esc(b.ref)} · received ${fmtDate(b.created_at)}${b.data.referral ? " · referred" : ""}</span></div>
           <b class="lime">${money(b.estimate_cents)}</b>
           <select class="inline" data-id="${b.id}">${["new", "quoted", "confirmed", "declined"].map((s) => `<option ${s === b.status ? "selected" : ""}>${s}</option>`).join("")}</select></summary>
         <div class="body">
-          <div><span>Contact</span><span><a class="lime" href="mailto:${esc(b.email)}">${esc(b.email)}</a> · <a class="lime" href="tel:${esc(b.phone)}">${esc(b.phone)}</a></span></div>
-          ${fields.filter(([, k]) => b.data[k]).map(([l, k]) => `<div><span>${l}</span><span>${esc(b.data[k])}</span></div>`).join("")}
-          ${b.data.estimate ? `<div><span>Estimate</span><span>${b.data.estimate.lines.map((l) => `${esc(l.label)}: $${l.amount}`).join("<br>")}<br><b>Total $${b.data.estimate.total}${b.data.estimate.custom ? " + travel" : ""} · deposit $${b.data.estimate.deposit}</b></span></div>` : ""}
-          <p style="margin:10px 0 0"><a class="btn sm" href="mailto:${esc(b.email)}?subject=${encodeURIComponent("Your Wild Soja quote " + b.ref)}">Reply by email</a></p>
-        </div></details>`).join("") : '<div class="empty-state"><h3>No requests yet</h3><p>Share <b>yoursite.com/book</b> with clients. Their requests show up here.</p></div>'}`,
+          <div><span>Contact</span><span><a class="lime" href="tel:${esc(phone)}">${esc(b.phone)}</a> · <a class="lime" href="mailto:${esc(b.email)}">${esc(b.email)}</a></span></div>
+          ${fields.filter(([, k]) => b.data[k] && show(b.data[k]).length).map(([l, k]) => `<div><span>${l}</span><span>${esc(show(b.data[k]))}</span></div>`).join("")}
+          ${quoteHtml}
+          ${msg ? `<div><span>Quote message</span><span><textarea class="qmsg" rows="3" style="font-size:14px">${esc(msg)}</textarea></span></div>` : ""}
+          <p style="margin:10px 0 0;display:flex;gap:8px;flex-wrap:wrap">
+            ${phone ? `<a class="btn sm" data-sms="${esc(phone)}" href="sms:${esc(phone)}">Text quote</a>` : ""}
+            <a class="btn sm ghost" data-mail="${esc(b.email)}" data-subj="${esc("Your Wild Soja quote (" + b.ref + ")")}" href="mailto:${esc(b.email)}">Email quote</a>
+            <button type="button" class="btn sm ghost" data-copy>Copy message</button></p>
+        </div></details>`;
+      }).join("") : '<div class="empty-state"><h3>No requests yet</h3><p>Share <b>yoursite.com/book</b> with clients. Their requests show up here.</p></div>'}`,
       { bookings: list.filter((b) => b.status === "new").length });
     app.querySelectorAll("select[data-id]").forEach((s) => {
       s.onclick = (ev) => ev.stopPropagation();
       s.onchange = async () => { await api("/api/admin/bookings/" + s.dataset.id, { method: "PUT", body: { status: s.value } }); WN.toast("Updated"); };
+    });
+    // Quote buttons use whatever is in the (editable) message box.
+    app.querySelectorAll("details.bk").forEach((d) => {
+      const box = d.querySelector(".qmsg"); if (!box) return;
+      const sms = d.querySelector("[data-sms]"), mail = d.querySelector("[data-mail]");
+      const sync = () => {
+        if (sms) sms.href = `sms:${sms.dataset.sms}?&body=${encodeURIComponent(box.value)}`;
+        mail.href = `mailto:${mail.dataset.mail}?subject=${encodeURIComponent(mail.dataset.subj)}&body=${encodeURIComponent(box.value)}`;
+      };
+      box.oninput = sync; sync();
+      d.querySelector("[data-copy]").onclick = async () => { try { await navigator.clipboard.writeText(box.value); WN.toast("Copied"); } catch (e) { box.select(); } };
     });
   }
 
