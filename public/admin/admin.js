@@ -2,6 +2,7 @@
 (function () {
   const app = document.getElementById("app");
   const { api, esc, money } = WN;
+  const WN_CONFIG_BOOKING_EMAIL = (window.WN_CONFIG && window.WN_CONFIG.bookingEmail) || "bookings.soja@gmail.com";
   let me = {};
 
   const fmtDate = (s) => s ? new Date(s.replace(" ", "T") + (s.includes("T") ? "" : "Z")).toLocaleString("en-CA", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }) : "";
@@ -270,7 +271,7 @@
   async function bookings() {
     const list = await api("/api/admin/bookings");
     const fields = [["Date", "date"], ["Start", "startTime"], ["Hours", "hours"], ["Guests", "guestRange"], ["City", "city"], ["Location", "location"], ["Venue", "venue"], ["Venue sound?", "venueSound"],
-      ["Extras", "extras"], ["Referred by", "referral"], ["Notes", "notes"], ["Prefers", "contactPref"],
+      ["Mics", "mics"], ["Extras", "extras"], ["Referred by", "referral"], ["Notes", "notes"], ["Prefers", "contactPref"],
       // older requests (before the form was simplified)
       ["Add-ons", "addOns"], ["Genres", "genres"], ["Must-play", "mustPlay"], ["Do-not-play", "doNotPlay"], ["Budget", "budget"]];
     const show = (v) => Array.isArray(v) ? v.join(", ") : v;
@@ -281,7 +282,8 @@
       const price = discounted ? e.referralTotal : e.total;
       return `Hi ${first}, thanks for reaching out about your ${b.event_type.toLowerCase()} on ${b.event_date}! ` +
         `For ${e.hours} hours of DJ${e.travel && e.travel.charge ? ", including travel" : ""}, it's $${price}${e.custom ? " plus travel" : ""}` +
-        `${discounted ? " (with your referral discount)" : ""}. Let me know if you'd like to lock in the date. - Wild Soja`;
+        `${discounted ? " (with your referral discount)" : ""}. ` +
+        `To lock in the date, send a $${e.deposit || 100} deposit by Interac e-Transfer to ${WN_CONFIG_BOOKING_EMAIL}. - Wild Soja`;
     };
     shell("bookings", `
       <div class="top"><h1 class="t">DJ bookings</h1><span class="muted">${list.length} request${list.length === 1 ? "" : "s"}</span></div>

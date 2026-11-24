@@ -7,7 +7,7 @@
   brand: {
     djName: "Wild Soja",
     company: "Wild Nation",
-    email: "wildnationgta@gmail.com",
+    email: "bookings.soja@gmail.com",
     phone: "+1 (365) 366-7490",
     instagram: "wld.ntn",
     homeBase: "Hamilton",
@@ -15,6 +15,13 @@
 
   formEndpoint: "/api/bookings",
   currency: "CAD",
+
+  /* Booking requests are emailed here, and deposits go here by Interac e-Transfer. */
+  bookingEmail: "bookings.soja@gmail.com",
+  deposit: 100,            // $ deposit to lock in a date (e-Transfer to bookingEmail)
+
+  /* Show the client a rough estimate at the bottom of the form (final price comes from you). */
+  showEstimate: true,
 
   /* ---- DJ rate ---- */
   hourlyRate: 100,         // $ per hour (4 hours = $400)
@@ -100,11 +107,17 @@
     other: { label: "Something else" },
   },
 
-  /* Extras the client can tick (prices are only shown to you). */
+  /* Microphones: the client picks how many. */
+  mics: [
+    { count: 0, label: "No mic", price: 0 },
+    { count: 1, label: "1 microphone", price: 25 },
+    { count: 2, label: "2 microphones", price: 50 },
+  ],
+
+  /* Extras the client can tick. */
   extras: [
     { name: "Lighting", price: 50 },
     { name: "MC / hosting", price: 50 },
-    { name: "Wireless mic", price: 25 },
   ],
 };
 if (typeof module !== "undefined") module.exports = globalThis.WN_CONFIG || window.WN_CONFIG;

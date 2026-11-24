@@ -7,6 +7,24 @@
   $("city").insertAdjacentHTML("beforeend", C.travel.cities.map((c) => `<option>${c.name}</option>`).join(""));
   for (let h = C.minimumHours; h <= C.maximumHours; h++) $("hours").insertAdjacentHTML("beforeend", `<option value="${h}" ${h === C.defaultHours ? "selected" : ""}>${h} hours</option>`);
   $("guests").insertAdjacentHTML("beforeend", C.guestRanges.map((g) => `<option value="${g.value}">${g.label}</option>`).join(""));
+  $("mics").innerHTML = C.mics.map((m) => `<option value="${m.count}">${m.label}</option>`).join("");
+  document.querySelectorAll(".bkEmail").forEach((el) => { el.textContent = C.bookingEmail; if (el.href) el.href = "mailto:" + C.bookingEmail; });
+  if ($("depAmt")) $("depAmt").textContent = "$" + C.deposit;
+
+  // Rough estimate once the key details are in. The final price comes from Wild Soja.
+  function updateEstimate() {
+    const box = $("estimate");
+    if (!C.showEstimate || !window.WNPricing) return;
+    const v = values();
+    if (!v.type || !v.guests || !v.city) { box.hidden = true; return; }
+    const q = WNPricing.calculate(C, v);
+    const price = q.referred && q.referralSaves > 0 ? q.referralTotal : q.total;
+    $("estAmount").textContent = "$" + price + (q.custom ? " + travel" : "");
+    $("estNote").textContent = (q.referred && q.referralSaves > 0 ? "Referral discount included. " : "") +
+      (q.custom ? "Travel is added once we know where you are. " : "") +
+      "Includes DJ, sound for your crowd, equipment and travel. Your final price is confirmed in your quote.";
+    box.hidden = false;
+  }
   $("extras").innerHTML = C.extras.map((x) => `<label class="extra"><input type="checkbox" name="extras" value="${x.name}"><span>${x.name}</span></label>`).join("");
   const tomorrow = new Date(Date.now() + 864e5); $("date").min = tomorrow.toISOString().slice(0, 10);
   const toggleOther = () => { $("otherCity").hidden = !/else/i.test($("city").value); };
@@ -28,7 +46,9 @@
     }
   } catch (e) {}
   toggleOther();
-  form.addEventListener("input", () => { try { localStorage.setItem(DRAFT, JSON.stringify(values())); } catch (e) {} });
+  updateEstimate();
+  form.addEventListener("input", () => { updateEstimate(); try { localStorage.setItem(DRAFT, JSON.stringify(values())); } catch (e) {} });
+  form.addEventListener("change", updateEstimate);
 
   function setErr(el, bad) { const f = el.closest(".field"); if (f) f.classList.toggle("has-err", bad); el.classList.toggle("invalid", bad); }
   function validate() {
@@ -57,7 +77,7 @@
       scrollTo({ top: 0, behavior: "smooth" });
     } catch (err) {
       btn.disabled = false; btn.textContent = "Request a quote";
-      $("formErr").textContent = err.message + ". You can also text us at " + C.brand.phone;
+      $("formErr").textContent = err.message + ". You can also email " + C.bookingEmail + " or text " + C.brand.phone;
     }
   });
 })();

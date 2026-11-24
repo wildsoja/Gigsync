@@ -485,3 +485,7 @@ input[type=range]{padding:0;border:0;background:transparent;accent-color:var(--l
 .extra input:checked + span{border-color:var(--lime);background:rgba(214,251,81,.1);color:var(--lime)}
 .extra input:focus-visible + span{box-shadow:0 0 0 3px rgba(214,251,81,.25)}
 .book-form .btn.block{margin-top:22px}
+.estimate{display:flex;gap:18px;align-items:center;flex-wrap:wrap;margin-top:24px;padding:18px 20px;border-radius:16px;border:1px solid rgba(214,251,81,.3);background:linear-gradient(135deg,rgba(214,251,81,.08),rgba(139,92,246,.08))}
+.estimate small{display:block;font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
+.estimate b{font-family:var(--display);font-weight:400;font-size:44px;line-height:1;color:var(--lime)}
+.estimate p{flex:1;min-width:200px;margin:0;font-size:13px;color:var(--muted)}

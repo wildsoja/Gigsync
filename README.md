@@ -73,7 +73,10 @@ Back up `DATA_DIR` (`wildnation.db`, `secret.key`, `uploads/`). If `secret.key` 
 - $100/hour (4 hours = $400). If the client says they were referred, a $50 referral price is shown too (4 hours = $350).
 - **Minimum to leave the house:** $200 in Hamilton, $250 anywhere else. If a request adds up to less, the quote is raised to the minimum (a referral discount can't go below it either).
 - **Sound by crowd size** (client picks a guest range): up to 80 guests = 1 speaker (included), 81–150 = 2 speakers +$50, 151–250 = 2 speakers + sub +$100, 250+ = full PA +$150. If the venue has its own sound system, this is skipped.
-- **Extras:** lighting +$50, MC/hosting +$50, wireless mic +$25. Any event type can also carry a flat `extra` (e.g. weddings).
+- **Equipment:** microphones (1 mic +$25, 2 mics +$50), lighting +$50, MC/hosting +$50. Any event type can also carry a flat `extra` (e.g. weddings).
+- **What the client sees:** once they pick event type, guests and city, a rough "Estimated price" appears above the Request button (referral discount included), with a note that you confirm the final price. Turn it off with `showEstimate: false`.
+- **Where requests go:** each request is emailed to **bookings.soja@gmail.com** (change with `BOOKINGS_EMAIL`), with reply-to set to the client, so hitting Reply answers them. It's also saved in `/admin` → DJ bookings.
+- **Deposit:** the confirmation screen and your quote message ask for a $100 deposit by Interac e-Transfer to bookings.soja@gmail.com (`deposit` / `bookingEmail` in the settings file).
 - Travel from Hamilton: round-trip km × (gas $1.60/L × 11 L/100 km + 5¢/km wear) ≈ 23¢/km, rounded up to the nearest $5. Toronto areas add $15 for parking/traffic. Hamilton itself is free. Examples: Burlington $10, St. Catharines $25, Niagara Falls $35, downtown Toronto $50. Change `fuelPrice` when gas moves.
 - In `/admin` → DJ bookings, each request shows the breakdown and a ready-to-send message. Edit it if you like, then tap **Text quote** or **Email quote**.
 - **Blog posts & past-event recaps:** write and edit them in `/admin` → Blog. The 9 original recaps are loaded as posts on first run. Posts support headings, **bold**, links, images, pull quotes and YouTube embeds (paste the link on its own line).

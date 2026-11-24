@@ -108,7 +108,8 @@ test("DJ quote: $100/hr, travel from Hamilton by city, referral discount", async
   assert.equal(quote(H, { guests: 150 }).total, 450);
   assert.equal(quote(H, { guests: 250 }).total, 500);
   assert.equal(quote(H, { guests: 150, venueSound: "yes" }).total, 400);
-  assert.equal(quote(H, { extras: ["Lighting", "Wireless mic"] }).total, 475);
+  assert.equal(quote(H, { extras: ["Lighting"], mics: 1 }).total, 475);
+  assert.equal(quote(H, { mics: 2 }).total, 450, "more mics, more money");
 
   const r = await post("/api/bookings", { name: "X", email: "x@x.co", phone: "905", type: "wedding", hours: "4", city: "St. Catharines", date: "2099-03-03", referral: "Kemi" });
   assert.equal(r.status, 200);

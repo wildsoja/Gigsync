@@ -38,7 +38,7 @@ window.WN = (function () {
           <p style="margin:14px 0 18px;max-width:340px" class="muted">Immersive nights across Hamilton, Toronto and Niagara. Don't think inside the box… wild out on it.</p>
           <div class="socials">${BRAND.socials.map(([n, h, p]) => `<a href="${h}" target="_blank" rel="noopener" aria-label="${n}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${p}</svg></a>`).join("")}</div></div>
         <div class="footer-links"><b style="margin-bottom:6px">Explore</b><a href="/events">Events</a><a href="/blog">Blog</a><a href="/wildsoja">DJ Wild Soja</a><a href="/book">Book a DJ</a></div>
-        <div class="footer-links"><b style="margin-bottom:6px">Contact</b><a href="mailto:${BRAND.email}">${BRAND.email}</a><a href="tel:${BRAND.tel}">${BRAND.phone}</a><a href="/contact">Send a message</a></div>
+        <div class="footer-links"><b style="margin-bottom:6px">Contact</b><a href="mailto:${BRAND.email}">${BRAND.email}</a><a href="mailto:bookings.soja@gmail.com">DJ bookings: bookings.soja@gmail.com</a><a href="tel:${BRAND.tel}">${BRAND.phone}</a><a href="/contact">Send a message</a></div>
       </div>
       <small>© ${new Date().getFullYear()} Wild Nation Events. All rights reserved.</small></div>`;
     document.body.append(f);

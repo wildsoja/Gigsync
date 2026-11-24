@@ -210,6 +210,7 @@ app.post("/api/bookings", (req, res) => {
     type: b.type, date: clean(b.date, 10), startTime: clean(b.startTime, 5), hours: clean(b.hours, 3), guests: clean(b.guests, 6),
     guestRange: (BOOKING.guestRanges.find((g) => String(g.value) === String(b.guests)) || {}).label || "",
     venueSound: ["yes", "no", "unsure"].includes(b.venueSound) ? b.venueSound : "unsure",
+    mics: String((BOOKING.mics.find((m) => String(m.count) === String(b.mics)) || { count: 0 }).count),
     city: cities.includes(b.city) ? b.city : "", location: clean(b.location, 200), venue: clean(b.venue, 200),
     extras: (Array.isArray(b.extras) ? b.extras : []).filter((x) => BOOKING.extras.some((e) => e.name === x)),
     name: clean(b.name, 120), phone: clean(b.phone, 40), email: clean(b.email, 200), contactPref: clean(b.contactPref, 20),
@@ -226,7 +227,7 @@ app.post("/api/bookings", (req, res) => {
     `${v.name} · ${v.phone} · ${v.email} (prefers ${v.contactPref || "any"})`,
     `${label} on ${v.date}${v.startTime ? " at " + v.startTime : ""}, ${quote.hours} hrs, ${v.guestRange || "?"} guests`,
     `Where: ${where}${v.venue ? " · " + v.venue : ""} · venue sound: ${v.venueSound}`,
-    v.extras.length ? `Extras: ${v.extras.join(", ")}` : "",
+    `Mics: ${v.mics}${v.extras.length ? ` · Extras: ${v.extras.join(", ")}` : ""}`,
     v.referral ? `Referred by: ${v.referral}` : "",
     v.notes ? `Notes: ${v.notes}` : "",
     "",
@@ -235,8 +236,8 @@ app.post("/api/bookings", (req, res) => {
     `Total: $${quote.total}${quote.custom ? " + travel (quote it yourself)" : ""}${quote.minApplied ? ` (minimum $${quote.minimum} applied)` : ""}`,
     quote.referred ? (quote.referralSaves > 0 ? `Referral price: $${quote.referralTotal}` : "Referred, but already at the minimum (no discount)") : "",
     "",
-    `Ref ${ref}. Reply from /admin → DJ bookings.`,
-  ].filter((x) => x !== "").join("\n"));
+    `Ref ${ref}. Hit reply to answer ${v.name.split(" ")[0]} directly, or use /admin → DJ bookings.`,
+  ].filter((x) => x !== "").join("\n"), { to: mail.bookingsInbox(), replyTo: v.email });
   res.json({ ok: true, ref });
 });
 

@@ -18,6 +18,7 @@
     <span class="eyebrow">Wild Soja · Booking</span>
     <h1 class="display h-lg" style="margin-top:14px">Book <span class="lime">Wild Soja</span></h1>
     <p class="lead">Tell us about your event. It takes about a minute, and we'll get back to you with your quote, usually within 24 hours.</p>
+    <p class="muted" style="margin:10px 0 0">Prefer email? <a class="lime bkEmail" href="mailto:bookings.soja@gmail.com">bookings.soja@gmail.com</a></p>
   </div>
 </header>
 
@@ -42,8 +43,11 @@
       <div class="field"><label for="venueSound">Does the venue have a sound system?</label><select id="venueSound" name="venueSound"><option value="unsure">Not sure</option><option value="no">No</option><option value="yes">Yes</option></select></div>
     </div>
 
-    <h2 class="form-h">Anything extra?</h2>
-    <div class="extras" id="extras"></div>
+    <h2 class="form-h">Equipment</h2>
+    <div class="row2">
+      <div class="field"><label for="mics">Microphones</label><select id="mics" name="mics"></select><span class="hint">For speeches, toasts or an MC</span></div>
+      <div class="field"><label>Anything extra?</label><div class="extras" id="extras"></div></div>
+    </div>
 
     <h2 class="form-h">Your details</h2>
     <div class="row2">
@@ -57,6 +61,10 @@
     <div class="field"><label for="referral">Were you referred? <span class="hint" style="font-weight:400">Tell us who sent you</span></label><input id="referral" name="referral" placeholder="Name of the person or venue (optional)"></div>
     <div class="field"><label for="notes">Anything else we should know?</label><textarea id="notes" name="notes" placeholder="Music you love, special moments, questions…"></textarea></div>
     <input type="text" name="_gotcha" style="display:none" tabindex="-1" autocomplete="off">
+    <div class="estimate" id="estimate" hidden aria-live="polite">
+      <div><small>Estimated price</small><b id="estAmount"></b></div>
+      <p id="estNote">Includes DJ, sound for your crowd, equipment and travel. Your final price is confirmed in your quote.</p>
+    </div>
     <button class="btn lg block" id="submitBtn">Request a quote</button>
     <p class="hint" style="margin:12px 0 0;text-align:center">No payment now. We'll also send you occasional Wild Nation event updates. <label class="optout"><input type="checkbox" name="noUpdates" value="1"> No thanks</label></p>
     <div class="form-msg err" id="formErr"></div>
@@ -67,12 +75,21 @@
     <h2>Request sent</h2>
     <p id="successMsg">Thanks! We'll check the date and get back to you with your quote, usually within 24 hours.</p>
     <div class="ref" id="refNum"></div>
+    <div class="card" style="max-width:480px;margin:0 auto 22px;text-align:left;padding:18px">
+      <b>What happens next</b>
+      <ol style="margin:8px 0 0;padding-left:20px;color:var(--muted);line-height:1.7">
+        <li>We confirm your date and send your final quote.</li>
+        <li>To lock in the date, send a <b style="color:var(--text)" id="depAmt">$100</b> deposit by Interac e-Transfer to <b style="color:var(--text)" class="bkEmail">bookings.soja@gmail.com</b>.</li>
+        <li>We plan the music together. Then we party.</li>
+      </ol>
+    </div>
     <p style="margin-top:6px"><a class="btn" href="/">Back to the site</a></p>
   </div>
 </div>
 
 <script src="/assets/js/site.js"></script>
 <script src="/assets/js/booking-config.js"></script>
+<script src="/assets/js/pricing.js"></script>
 <script src="/assets/js/book.js"></script>
 </body>
 </html>

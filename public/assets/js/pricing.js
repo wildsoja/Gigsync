@@ -34,6 +34,9 @@
     const sound = soundFor(cfg, v.guests, v.venueSound);
     lines.push({ label: `Sound: ${sound.label}${range ? ` (${range} guests)` : ""}${v.venueSound === "unsure" ? ", venue sound unknown" : ""}`, amount: sound.price });
 
+    const mic = (cfg.mics || []).find((m) => String(m.count) === String(v.mics || 0));
+    if (mic && mic.count) lines.push({ label: mic.label, amount: mic.price });
+
     const picked = [].concat(v.extras || []);
     for (const x of cfg.extras) if (picked.includes(x.name)) lines.push({ label: x.name, amount: x.price });
 
@@ -51,6 +54,7 @@
       custom: travel.custom, // travel must be quoted by hand
       referred, referralTotal: referred ? Math.max(minimum, total - cfg.referralDiscount) : total,
       referralSaves: referred ? total - Math.max(minimum, total - cfg.referralDiscount) : 0, // 0 when already at the minimum
+      deposit: cfg.deposit || 0,
     };
   }
 
