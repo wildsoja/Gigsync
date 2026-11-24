@@ -8,7 +8,7 @@ window.WN_RECAPS = [
     text: "Friday, October 29th: Wild Nation shut down Hamilton. Child's Play was no play at all. People came from all over Ontario to kick off Halloween weekend with us, with our host all the way from Ottawa and a guest artist from Toronto. It was a movie." },
   { slug: "level-up-2021", title: "Level Up 2021", city: "Toronto", date: "October 2021", img: "/img/recaps/level-up-2021.webp",
     text: "A celebration of the big wins of the talented artists and performers in the GTA. A lil something during reading week to take your mind off school and just chill. Our guest artists were amazing. If you were tryna update your playlist, you had to be there." },
-  { slug: "naija-independence-2021", title: "Nigeria Independence Day Party", city: "St. Catharines", date: "October 2021", img: "/img/recaps/naija-independence-2021.webp",
+  { slug: "naija-independence-2021", title: "Nigeria Independence Day Party", city: "St. Catharines, Niagara", date: "October 2021", img: "/img/recaps/naija-independence-2021.webp",
     text: "Still gotta rep Nigeria in Canada. We got St. Catharines lit this time, partying hard to celebrate our country's independence. What a good day to be a Nigerian in the diaspora 🇳🇬 And if your DJ isn't the centre of attention at the party, you're doing something wrong." },
   { slug: "entanglement-2021", title: "Entanglement 2021", city: "Toronto", date: "August 2021", img: "/img/recaps/entanglement-2021.webp",
     text: "Entanglement: The Seductive Encounter was a highly anticipated party. What better way to wrap up the summer than with a few entanglements? And please, can somebody tell the legwork dancers to chill. Some of us are still learning, but they were the highlight of the night." },

@@ -10,7 +10,7 @@
     email: "wildnationgta@gmail.com",
     phone: "+1 (365) 366-7490",
     instagram: "wld.ntn",
-    city: "Toronto & Hamilton (GTA)",
+    city: "Hamilton, Toronto & Niagara",
   },
 
   /* Booking requests are saved by the server and show up in /admin.
