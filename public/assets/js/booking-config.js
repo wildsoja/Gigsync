@@ -33,8 +33,11 @@
     hst: { registered: false, rate: 13, number: "" }, // set registered: true and your number once you charge HST
   },
 
-  /* Show the client a rough estimate at the bottom of the form (final price comes from you). */
-  showEstimate: true,
+  /* When the client sees their estimated price (the final price always comes from you):
+     "after"  on the confirmation screen, once they've sent the request (leaves room to talk and negotiate)
+     "live"   at the bottom of the form while they fill it in
+     "never"  not shown at all */
+  showEstimate: "after",
 
   /* ---- DJ rate ---- */
   hourlyRate: 100,         // default $ per hour; each event type below can set its own `rate`

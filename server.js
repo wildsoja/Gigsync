@@ -240,7 +240,10 @@ app.post("/api/bookings", (req, res) => {
     "",
     `Ref ${ref}. Hit reply to answer ${v.name.split(" ")[0]} directly, or use /admin → DJ bookings.`,
   ].filter((x) => x !== "").join("\n"), { to: mail.bookingsInbox(), replyTo: v.email });
-  res.json({ ok: true, ref });
+  // The client sees this on the confirmation screen (unless showEstimate is "never").
+  const estimate = BOOKING.showEstimate === "never" ? null
+    : { total: quote.total, customType: !!quote.customType, travelTbc: !!quote.custom, discount: quote.discount, discountPct: quote.discountPct, hours: quote.hours };
+  res.json({ ok: true, ref, estimate });
 });
 
 app.post("/api/messages", (req, res) => {

@@ -14,7 +14,7 @@
   // Rough estimate once the key details are in. The final price comes from Wild Soja.
   function updateEstimate() {
     const box = $("estimate");
-    if (!C.showEstimate || !window.WNPricing) return;
+    if (C.showEstimate !== "live" || !window.WNPricing) return; // "after": shown on the confirmation screen instead
     const v = values();
     if (!v.type || !v.guests || !v.city) { box.hidden = true; return; }
     const q = WNPricing.calculate(C, v);
@@ -76,7 +76,19 @@
       const r = await WN.api(C.formEndpoint, { method: "POST", body: values() });
       form.style.display = "none"; $("success").style.display = "block"; $("refNum").textContent = "Ref " + r.ref;
       const first = $("name").value.trim().split(/\s+/)[0];
-      $("successMsg").textContent = `Thanks ${first}! We'll check the date and get back to you with your quote, usually within 24 hours.`;
+      $("successMsg").textContent = `Thanks ${first}! We'll check the date and get back to you, usually within 24 hours.`;
+      const est = r.estimate;
+      if (est && C.showEstimate !== "never") {
+        if (est.customType) {
+          $("doneAmount").textContent = "Custom quote";
+          $("doneNote").textContent = "Running sound for a whole event depends on the setup. We'll reach out to talk it through and put together your price.";
+        } else {
+          $("doneAmount").textContent = "$" + est.total + (est.travelTbc ? " + travel" : "");
+          $("doneNote").textContent = `For ${est.hours} hours, based on what you told us${est.discount ? `, including your ${est.discountPct}% referral discount` : ""}. ` +
+            "We'll reach out to go over the details and confirm your final price.";
+        }
+        $("doneEstimate").hidden = false;
+      }
       try { localStorage.removeItem(DRAFT); } catch (e) {}
       scrollTo({ top: 0, behavior: "smooth" });
     } catch (err) {
