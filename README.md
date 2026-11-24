@@ -71,6 +71,9 @@ Back up `DATA_DIR` (`wildnation.db`, `secret.key`, `uploads/`). If `secret.key` 
 
 ### How DJ quotes are worked out (only you see them)
 - $100/hour (4 hours = $400). If the client says they were referred, a $50 referral price is shown too (4 hours = $350).
+- **Minimum to leave the house:** $200 in Hamilton, $250 anywhere else. If a request adds up to less, the quote is raised to the minimum (a referral discount can't go below it either).
+- **Sound by crowd size** (client picks a guest range): up to 80 guests = 1 speaker (included), 81–150 = 2 speakers +$50, 151–250 = 2 speakers + sub +$100, 250+ = full PA +$150. If the venue has its own sound system, this is skipped.
+- **Extras:** lighting +$50, MC/hosting +$50, wireless mic +$25. Any event type can also carry a flat `extra` (e.g. weddings).
 - Travel from Hamilton: round-trip km × (gas $1.60/L × 11 L/100 km + 5¢/km wear) ≈ 23¢/km, rounded up to the nearest $5. Toronto areas add $15 for parking/traffic. Hamilton itself is free. Examples: Burlington $10, St. Catharines $25, Niagara Falls $35, downtown Toronto $50. Change `fuelPrice` when gas moves.
 - In `/admin` → DJ bookings, each request shows the breakdown and a ready-to-send message. Edit it if you like, then tap **Text quote** or **Email quote**.
 - **Blog posts & past-event recaps:** write and edit them in `/admin` → Blog. The 9 original recaps are loaded as posts on first run. Posts support headings, **bold**, links, images, pull quotes and YouTube embeds (paste the link on its own line).

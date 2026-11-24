@@ -97,6 +97,18 @@ test("DJ quote: $100/hr, travel from Hamilton by city, referral discount", async
   assert.equal(quote("Toronto: Downtown / Midtown").travel.charge, 50);
   assert.equal(quote("Somewhere else").custom, true);
   assert.equal(quote("Hamilton (incl. Stoney Creek, Ancaster, Dundas, Waterdown)", { referral: "Kemi" }).referralTotal, 350);
+  // minimum to leave the house
+  const H = "Hamilton (incl. Stoney Creek, Ancaster, Dundas, Waterdown)";
+  assert.equal(quote(H, { hours: 2 }).total, 200);
+  assert.equal(quote("St. Catharines", { hours: 2 }).total, 250);
+  assert.equal(quote("Toronto: Downtown / Midtown", { hours: 2 }).total, 250);
+  assert.equal(quote(H, { hours: 2, referral: "x" }).referralTotal, 200, "referral never goes below the minimum");
+  // crowd decides the speakers; venue sound skips it
+  assert.equal(quote(H, { guests: 80 }).total, 400);
+  assert.equal(quote(H, { guests: 150 }).total, 450);
+  assert.equal(quote(H, { guests: 250 }).total, 500);
+  assert.equal(quote(H, { guests: 150, venueSound: "yes" }).total, 400);
+  assert.equal(quote(H, { extras: ["Lighting", "Wireless mic"] }).total, 475);
 
   const r = await post("/api/bookings", { name: "X", email: "x@x.co", phone: "905", type: "wedding", hours: "4", city: "St. Catharines", date: "2099-03-03", referral: "Kemi" });
   assert.equal(r.status, 200);

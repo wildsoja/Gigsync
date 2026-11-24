@@ -6,7 +6,8 @@
   $("type").insertAdjacentHTML("beforeend", Object.entries(C.eventTypes).map(([k, t]) => `<option value="${k}">${t.label}</option>`).join(""));
   $("city").insertAdjacentHTML("beforeend", C.travel.cities.map((c) => `<option>${c.name}</option>`).join(""));
   for (let h = C.minimumHours; h <= C.maximumHours; h++) $("hours").insertAdjacentHTML("beforeend", `<option value="${h}" ${h === C.defaultHours ? "selected" : ""}>${h} hours</option>`);
-  $("extras").innerHTML = C.extras.map((x) => `<label class="extra"><input type="checkbox" name="extras" value="${x}"><span>${x}</span></label>`).join("");
+  $("guests").insertAdjacentHTML("beforeend", C.guestRanges.map((g) => `<option value="${g.value}">${g.label}</option>`).join(""));
+  $("extras").innerHTML = C.extras.map((x) => `<label class="extra"><input type="checkbox" name="extras" value="${x.name}"><span>${x.name}</span></label>`).join("");
   const tomorrow = new Date(Date.now() + 864e5); $("date").min = tomorrow.toISOString().slice(0, 10);
   const toggleOther = () => { $("otherCity").hidden = !/else/i.test($("city").value); };
   $("city").addEventListener("change", toggleOther);
@@ -32,7 +33,7 @@
   function setErr(el, bad) { const f = el.closest(".field"); if (f) f.classList.toggle("has-err", bad); el.classList.toggle("invalid", bad); }
   function validate() {
     let first = null;
-    for (const id of ["type", "date", "city", "name", "phone", "email"]) {
+    for (const id of ["type", "date", "city", "guests", "name", "phone", "email"]) {
       const el = $(id); let bad = !el.value.trim();
       if (id === "email") bad = !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(el.value.trim());
       if (id === "date" && !bad) bad = el.value < el.min;

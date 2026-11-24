@@ -208,8 +208,10 @@ app.post("/api/bookings", (req, res) => {
   const cities = BOOKING.travel.cities.map((c) => c.name);
   const v = {
     type: b.type, date: clean(b.date, 10), startTime: clean(b.startTime, 5), hours: clean(b.hours, 3), guests: clean(b.guests, 6),
+    guestRange: (BOOKING.guestRanges.find((g) => String(g.value) === String(b.guests)) || {}).label || "",
+    venueSound: ["yes", "no", "unsure"].includes(b.venueSound) ? b.venueSound : "unsure",
     city: cities.includes(b.city) ? b.city : "", location: clean(b.location, 200), venue: clean(b.venue, 200),
-    extras: (Array.isArray(b.extras) ? b.extras : []).filter((x) => BOOKING.extras.includes(x)),
+    extras: (Array.isArray(b.extras) ? b.extras : []).filter((x) => BOOKING.extras.some((e) => e.name === x)),
     name: clean(b.name, 120), phone: clean(b.phone, 40), email: clean(b.email, 200), contactPref: clean(b.contactPref, 20),
     referral: clean(b.referral, 120), notes: clean(b.notes, 4000),
   };
@@ -222,16 +224,16 @@ app.post("/api/bookings", (req, res) => {
   const where = v.city && !quote.custom ? v.city : v.location || v.city || "?";
   mail.notifyOwner(`🎧 Booking request: ${label}, ${v.date}, ${where}`, [
     `${v.name} · ${v.phone} · ${v.email} (prefers ${v.contactPref || "any"})`,
-    `${label} on ${v.date}${v.startTime ? " at " + v.startTime : ""}, ${quote.hours} hrs, ~${v.guests || "?"} guests`,
-    `Where: ${where}${v.venue ? " · " + v.venue : ""}`,
+    `${label} on ${v.date}${v.startTime ? " at " + v.startTime : ""}, ${quote.hours} hrs, ${v.guestRange || "?"} guests`,
+    `Where: ${where}${v.venue ? " · " + v.venue : ""} · venue sound: ${v.venueSound}`,
     v.extras.length ? `Extras: ${v.extras.join(", ")}` : "",
     v.referral ? `Referred by: ${v.referral}` : "",
     v.notes ? `Notes: ${v.notes}` : "",
     "",
     "SUGGESTED QUOTE",
     ...quote.lines.map((l) => `${l.label}: $${l.amount}`),
-    `Total: $${quote.total}${quote.custom ? " + travel (quote it yourself)" : ""}`,
-    quote.referred ? `Referral price: $${quote.referralTotal}` : "",
+    `Total: $${quote.total}${quote.custom ? " + travel (quote it yourself)" : ""}${quote.minApplied ? ` (minimum $${quote.minimum} applied)` : ""}`,
+    quote.referred ? (quote.referralSaves > 0 ? `Referral price: $${quote.referralTotal}` : "Referred, but already at the minimum (no discount)") : "",
     "",
     `Ref ${ref}. Reply from /admin → DJ bookings.`,
   ].filter((x) => x !== "").join("\n"));

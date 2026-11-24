@@ -34,10 +34,13 @@
     </div>
     <div class="row2">
       <div class="field"><label for="city">City <span class="req">*</span></label><select id="city" name="city" required><option value="">Choose a city</option></select><span class="err">Choose a city</span></div>
-      <div class="field"><label for="guests">Guests (roughly)</label><input id="guests" name="guests" type="number" min="1" inputmode="numeric" placeholder="e.g. 80"></div>
+      <div class="field"><label for="guests">How many guests? <span class="req">*</span></label><select id="guests" name="guests" required><option value="">Choose a range</option></select><span class="err">Choose a guest range</span></div>
     </div>
     <div class="field" id="otherCity" hidden><label for="location">Where is it?</label><input id="location" name="location" placeholder="City or address"></div>
-    <div class="field"><label for="venue">Venue</label><input id="venue" name="venue" placeholder="Venue name or address (TBD is fine)"></div>
+    <div class="row2">
+      <div class="field"><label for="venue">Venue</label><input id="venue" name="venue" placeholder="Venue name or address (TBD is fine)"></div>
+      <div class="field"><label for="venueSound">Does the venue have a sound system?</label><select id="venueSound" name="venueSound"><option value="unsure">Not sure</option><option value="no">No</option><option value="yes">Yes</option></select></div>
+    </div>
 
     <h2 class="form-h">Anything extra?</h2>
     <div class="extras" id="extras"></div>

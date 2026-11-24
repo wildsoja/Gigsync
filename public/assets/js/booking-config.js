@@ -23,6 +23,30 @@
   maximumHours: 10,
   referralDiscount: 50,    // $ off when the client was referred (4 hours: $400 → $350)
 
+  /* ---- Minimum to leave the house ----
+     A quote is never lower than this, even after a referral discount. */
+  minimums: {
+    hamilton: 200,         // e.g. a 2-hour private event in Hamilton
+    outside: 250,          // anywhere outside Hamilton (St. Catharines, Toronto…). A city can override with `min`.
+  },
+
+  /* ---- Sound: the crowd decides the gear ----
+     Picked from the guest count. Skipped if the venue has its own sound system. */
+  soundTiers: [
+    { upTo: 80, label: "1 speaker", price: 0 },
+    { upTo: 150, label: "2 speakers", price: 50 },
+    { upTo: 250, label: "2 speakers + subwoofer", price: 100 },
+    { upTo: Infinity, label: "Full PA system", price: 150 },
+  ],
+  /* Guest ranges shown on the form (value = top of the range). */
+  guestRanges: [
+    { value: 50, label: "Under 50" },
+    { value: 80, label: "50 – 80" },
+    { value: 150, label: "81 – 150" },
+    { value: 250, label: "151 – 250" },
+    { value: 500, label: "More than 250" },
+  ],
+
   /* ---- Travel from Hamilton ----
      Charge = round-trip km × cost per km, rounded UP to the nearest `roundTo`.
      Cost per km = fuel (price × litres per 100 km ÷ 100) + wear on the vehicle.
@@ -63,6 +87,7 @@
     ],
   },
 
+  /* `extra` adds a flat amount for that event type, e.g. wedding: { label: "Wedding", extra: 100 } */
   eventTypes: {
     wedding: { label: "Wedding" },
     birthday: { label: "Birthday party" },
@@ -75,7 +100,11 @@
     other: { label: "Something else" },
   },
 
-  /* Extras the client can ask about (no prices shown; you quote them). */
-  extras: ["Sound system", "Lighting", "MC / hosting", "Wireless mic"],
+  /* Extras the client can tick (prices are only shown to you). */
+  extras: [
+    { name: "Lighting", price: 50 },
+    { name: "MC / hosting", price: 50 },
+    { name: "Wireless mic", price: 25 },
+  ],
 };
 if (typeof module !== "undefined") module.exports = globalThis.WN_CONFIG || window.WN_CONFIG;

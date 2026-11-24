@@ -269,7 +269,7 @@
   // ---------- Bookings ----------
   async function bookings() {
     const list = await api("/api/admin/bookings");
-    const fields = [["Date", "date"], ["Start", "startTime"], ["Hours", "hours"], ["Guests", "guests"], ["City", "city"], ["Location", "location"], ["Venue", "venue"],
+    const fields = [["Date", "date"], ["Start", "startTime"], ["Hours", "hours"], ["Guests", "guestRange"], ["City", "city"], ["Location", "location"], ["Venue", "venue"], ["Venue sound?", "venueSound"],
       ["Extras", "extras"], ["Referred by", "referral"], ["Notes", "notes"], ["Prefers", "contactPref"],
       // older requests (before the form was simplified)
       ["Add-ons", "addOns"], ["Genres", "genres"], ["Must-play", "mustPlay"], ["Do-not-play", "doNotPlay"], ["Budget", "budget"]];
@@ -277,18 +277,20 @@
     const quoteText = (b) => {
       const e = b.data.estimate, first = (b.name || "").split(/\s+/)[0];
       if (!e || !e.lines) return "";
-      const price = e.referred ? e.referralTotal : e.total;
+      const discounted = e.referred && e.referralSaves > 0;
+      const price = discounted ? e.referralTotal : e.total;
       return `Hi ${first}, thanks for reaching out about your ${b.event_type.toLowerCase()} on ${b.event_date}! ` +
         `For ${e.hours} hours of DJ${e.travel && e.travel.charge ? ", including travel" : ""}, it's $${price}${e.custom ? " plus travel" : ""}` +
-        `${e.referred ? " (with your referral discount)" : ""}. Let me know if you'd like to lock in the date. - Wild Soja`;
+        `${discounted ? " (with your referral discount)" : ""}. Let me know if you'd like to lock in the date. - Wild Soja`;
     };
     shell("bookings", `
       <div class="top"><h1 class="t">DJ bookings</h1><span class="muted">${list.length} request${list.length === 1 ? "" : "s"}</span></div>
       ${list.length ? list.map((b) => {
         const e = b.data.estimate || {}, msg = quoteText(b), phone = String(b.phone || "").replace(/[^\d+]/g, "");
         const quoteHtml = e.lines ? `<div><span>Suggested quote</span><span>${e.lines.map((l) => `${esc(l.label)}: <b>$${l.amount}</b>`).join("<br>")}
-            <br><b class="lime" style="font-size:18px">Total $${e.total}${e.custom ? " + travel (you set it)" : ""}</b>
-            ${e.referred ? `<br><b class="lime">Referral price $${e.referralTotal}</b> <span class="muted">($${e.total} − referral discount)</span>` : ""}
+            <br><b class="lime" style="font-size:18px">Total $${e.total}${e.custom ? " + travel (you set it)" : ""}</b>${e.minApplied ? ` <span class="pill new">minimum applied</span>` : ""}
+            ${e.referred ? (e.referralSaves > 0 ? `<br><b class="lime">Referral price $${e.referralTotal}</b> <span class="muted">($${e.total} − $${e.referralSaves} referral discount)</span>`
+              : `<br><span class="muted">Referred, but already at the minimum, so no discount</span>`) : ""}
             ${e.travel && e.travel.charge ? `<br><span class="muted" style="font-size:12px">Travel: ${e.travel.roundTripKm} km × $${e.travel.perKm}/km = $${e.travel.raw}, rounded up${e.travel.city.extra ? `, + $${e.travel.city.extra} parking/traffic` : ""}</span>` : ""}</span></div>` : "";
         return `<details class="bk"><summary>
           <div><b>${esc(b.name)}</b> · ${esc(b.event_type)} · ${esc(b.event_date)}${b.data.city ? ` · ${esc(b.data.city.split(" (")[0])}` : ""}<br><span class="muted" style="font-size:13px">${esc(b.ref)} · received ${fmtDate(b.created_at)}${b.data.referral ? " · referred" : ""}</span></div>
