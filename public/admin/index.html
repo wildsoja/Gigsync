@@ -65,6 +65,22 @@
   details.bk .body div{display:grid;grid-template-columns:140px 1fr;gap:10px}
   details.bk .body div span:first-child{color:var(--muted)}
   select.inline{width:auto;padding:6px 10px;font-size:13px;border-radius:999px}
+  .contract-box{margin-top:14px;padding:18px;border:1px solid rgba(214,251,81,.25);border-radius:14px;background:rgba(214,251,81,.04);display:block !important}
+  .contract-box .top{display:flex !important;justify-content:space-between;align-items:center;gap:12px}
+  details.bk .body .contract-box div{display:revert;grid-template-columns:none}
+  .cgrid{display:grid !important;grid-template-columns:repeat(4,1fr) !important;gap:10px}
+  .cgrid2{display:grid !important;grid-template-columns:3fr 1fr !important;gap:10px;margin-top:8px}
+  .cform label{display:flex;flex-direction:column;gap:4px;font-size:12px;color:var(--muted)}
+  .cform input,.cform select{padding:9px 11px;font-size:14px}
+  @media (max-width:760px){.cgrid{grid-template-columns:1fr 1fr !important}}
+  .cpreview{margin:14px 0;padding:12px 14px;border-radius:12px;background:rgba(0,0,0,.25);font-size:14px}
+  .inv-row{display:flex !important;justify-content:space-between;gap:12px;padding:4px 0;font-size:14px}
+  .inv-row span{color:var(--muted)}
+  .inv-row.total{border-top:1px solid var(--line);margin-top:6px;padding-top:8px;font-size:16px}
+  .steps{display:flex !important;gap:18px;flex-wrap:wrap;margin-top:14px;padding-top:12px;border-top:1px solid var(--line)}
+  .step{display:flex !important;align-items:center;gap:8px;font-size:14px}
+  .step i{width:22px;height:22px;border-radius:50%;border:2px solid var(--line-2);display:grid !important;place-items:center;font-style:normal;font-size:12px;color:#000}
+  .step.done i{background:var(--lime);border-color:var(--lime)}
 </style>
 </head>
 <body data-bare="1">

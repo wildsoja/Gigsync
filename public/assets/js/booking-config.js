@@ -20,15 +20,30 @@
   bookingEmail: "bookings.soja@gmail.com",
   deposit: 100,            // $ deposit to lock in a date (e-Transfer to bookingEmail)
 
+  /* Booking contract & invoice. These fill in the terms clients agree to (see lib/contract.js). */
+  contract: {
+    businessName: "Wild Nation Events (DJ Wild Soja)",
+    city: "Hamilton, Ontario",
+    balanceDue: "on the day of the event, before the performance starts",
+    cancelFullBalanceDays: 14,   // cancelling within this many days: 50% of the remaining balance is owed
+    rescheduleNoticeDays: 14,    // date changes requested at least this far ahead keep the deposit (once)
+    rescheduleWithinMonths: 12,  // the new date must be within this many months
+    arriveMinutesBefore: 60,     // setup time before start
+    mealHours: 5,                // events this long or longer: a meal/break for the DJ
+    hst: { registered: false, rate: 13, number: "" }, // set registered: true and your number once you charge HST
+  },
+
   /* Show the client a rough estimate at the bottom of the form (final price comes from you). */
   showEstimate: true,
 
   /* ---- DJ rate ---- */
-  hourlyRate: 100,         // $ per hour (4 hours = $400)
+  hourlyRate: 100,         // default $ per hour; each event type below can set its own `rate`
+  floorRate: 75,           // discounts never take DJ time below this $ per hour
   defaultHours: 4,
   minimumHours: 2,
   maximumHours: 10,
-  referralDiscount: 50,    // $ off when the client was referred (4 hours: $400 → $350)
+  referralPercent: 15,     // % off DJ time when the client was referred (you can change it per booking in /admin)
+  discountOptions: [0, 10, 15, 20, 25],
 
   /* ---- Minimum to leave the house ----
      A quote is never lower than this, even after a referral discount. */
@@ -94,17 +109,22 @@
     ],
   },
 
-  /* `extra` adds a flat amount for that event type, e.g. wedding: { label: "Wedding", extra: 100 } */
+  /* Rate per event type.
+     rate        $ per hour of DJ time
+     extra       flat add-on with its own label (e.g. wedding planning)
+     noReferral  referral discount doesn't apply (paid club events)
+     custom      no estimate: you build the quote yourself */
   eventTypes: {
-    wedding: { label: "Wedding" },
-    birthday: { label: "Birthday party" },
-    private: { label: "Private / house party" },
-    corporate: { label: "Corporate event" },
-    club: { label: "Club, bar or lounge" },
-    school: { label: "School, prom or formal" },
-    community: { label: "Church or community event" },
-    festival: { label: "Festival or concert" },
-    other: { label: "Something else" },
+    wedding: { label: "Wedding", rate: 125, extra: 150, extraLabel: "Wedding planning, timeline & MC prep" },
+    birthday: { label: "Birthday party", rate: 90 },
+    private: { label: "Private / house party", rate: 90 },
+    corporate: { label: "Corporate event", rate: 125 },
+    club: { label: "Club, bar or lounge", rate: 100, noReferral: true },
+    school: { label: "School, prom or formal", rate: 110 },
+    community: { label: "Church or community event", rate: 90 },
+    festival: { label: "Festival or concert", rate: 125 },
+    production: { label: "Full event sound & entertainment", custom: true },
+    other: { label: "Something else", rate: 100 },
   },
 
   /* Microphones: the client picks how many. */

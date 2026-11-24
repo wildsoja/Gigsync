@@ -270,61 +270,160 @@
   // ---------- Bookings ----------
   async function bookings() {
     const list = await api("/api/admin/bookings");
+    const CFG = window.WN_CONFIG || {};
     const fields = [["Date", "date"], ["Start", "startTime"], ["Hours", "hours"], ["Guests", "guestRange"], ["City", "city"], ["Location", "location"], ["Venue", "venue"], ["Venue sound?", "venueSound"],
       ["Mics", "mics"], ["Extras", "extras"], ["Referred by", "referral"], ["Notes", "notes"], ["Prefers", "contactPref"],
-      // older requests (before the form was simplified)
       ["Add-ons", "addOns"], ["Genres", "genres"], ["Must-play", "mustPlay"], ["Do-not-play", "doNotPlay"], ["Budget", "budget"]];
+    const statusLabel = { new: "new", quoted: "quoted", contract_sent: "contract sent", signed: "signed", confirmed: "deposit paid", paid: "paid in full", declined: "declined", cancelled: "cancelled" };
     const show = (v) => Array.isArray(v) ? v.join(", ") : v;
+    const $$ = (n) => "$" + Number(n || 0).toLocaleString("en-CA", { maximumFractionDigits: 2 });
     const quoteText = (b) => {
       const e = b.data.estimate, first = (b.name || "").split(/\s+/)[0];
-      if (!e || !e.lines) return "";
-      const discounted = e.referred && e.referralSaves > 0;
-      const price = discounted ? e.referralTotal : e.total;
+      if (!e || !e.lines || e.customType) return "";
       return `Hi ${first}, thanks for reaching out about your ${b.event_type.toLowerCase()} on ${b.event_date}! ` +
-        `For ${e.hours} hours of DJ${e.travel && e.travel.charge ? ", including travel" : ""}, it's $${price}${e.custom ? " plus travel" : ""}` +
-        `${discounted ? " (with your referral discount)" : ""}. ` +
-        `To lock in the date, send a $${e.deposit || 100} deposit by Interac e-Transfer to ${WN_CONFIG_BOOKING_EMAIL}. - Wild Soja`;
+        `For ${e.hours} hours of DJ${e.travel && e.travel.charge ? ", including travel" : ""}, it's $${e.total}${e.custom ? " plus travel" : ""}` +
+        `${e.discount ? " (with your referral discount)" : ""}. If that works, I'll send over the booking contract. To lock in the date, ` +
+        `there's a $${CFG.deposit || 100} deposit by Interac e-Transfer to ${WN_CONFIG_BOOKING_EMAIL}. - Wild Soja`;
     };
+    const lineRows = (lines) => lines.filter((l) => l.amount !== 0 || l.dj).map((l) => `<div class="inv-row"><span>${esc(l.label)}</span><b class="${l.amount < 0 ? "lime" : ""}">${l.amount < 0 ? "−" : ""}${$$(Math.abs(l.amount))}</b></div>`).join("");
+
+    function contractPanel(b) {
+      const e = b.data.estimate || {}, f = b.final, type = (CFG.eventTypes || {})[b.data.type] || {};
+      if (f) {
+        const step = (done, label, extra = "") => `<div class="step ${done ? "done" : ""}"><i>${done ? "✓" : ""}</i><span>${label}${extra}</span></div>`;
+        return `<div class="contract-box">
+          <div class="top" style="margin:0 0 10px"><b>Contract & invoice ${esc(f.invoiceNo)}</b><span><b class="lime" style="font-size:20px">${$$(f.grandTotal)}</b></span></div>
+          ${lineRows(f.lines)}
+          <div class="inv-row"><span>Deposit</span><b>${$$(f.deposit)}</b></div><div class="inv-row"><span>Balance</span><b>${$$(f.balance)}</b></div>
+          <div class="steps">
+            ${step(true, "Contract sent", ` <span class="muted">${fmtDate(b.contract_sent_at)}</span>`)}
+            ${step(!!b.signed_at, "Signed", b.signed_at ? ` <span class="muted">by ${esc(b.signed_name)}, ${fmtDate(b.signed_at)}</span>` : ' <span class="muted">waiting for the client</span>')}
+            ${step(!!b.deposit_paid_at, "Deposit received", b.deposit_paid_at ? ` <span class="muted">${fmtDate(b.deposit_paid_at)}</span>` : "")}
+            ${step(!!b.paid_at, "Paid in full", b.paid_at ? ` <span class="muted">${fmtDate(b.paid_at)}</span>` : "")}
+          </div>
+          <p style="margin:12px 0 0;display:flex;gap:8px;flex-wrap:wrap">
+            ${!b.deposit_paid_at ? `<button type="button" class="btn sm" data-act="deposit-received" data-id="${b.id}">Mark deposit received</button>` : ""}
+            ${!b.paid_at ? `<button type="button" class="btn sm ${b.deposit_paid_at ? "" : "ghost"}" data-act="paid-in-full" data-id="${b.id}">Mark paid in full</button>` : ""}
+            <a class="btn sm ghost" href="${esc(b.link)}" target="_blank">Open contract ↗</a>
+            <button type="button" class="btn sm ghost" data-copylink="${esc(b.link)}">Copy link</button>
+            ${!b.signed_at ? `<button type="button" class="btn sm ghost" data-edit="${b.id}">Edit & resend</button>` : ""}</p>
+          ${!b.signed_at ? `<div data-editor="${b.id}" hidden>${contractForm(b, f)}</div>` : ""}
+        </div>`;
+      }
+      return `<div class="contract-box"><b>Contract & invoice</b>
+        <p class="muted" style="margin:4px 0 12px;font-size:14px">Agreed on a price? Set the final details and send the booking contract and invoice to ${esc(b.email)}.</p>
+        ${contractForm(b, null)}</div>`;
+    }
+
+    function contractForm(b, f) {
+      const e = b.data.estimate || {}, type = (CFG.eventTypes || {})[b.data.type] || {};
+      const rate = f ? f.rate : e.rate || type.rate || CFG.hourlyRate || 100;
+      const disc = f ? f.discountPct : e.discountPct || 0;
+      const travel = f ? (f.lines.find((l) => /^Travel/.test(l.label)) || {}).amount || 0 : (e.travel && e.travel.charge) || 0;
+      const adj = f ? f.lines.filter((l) => !l.dj && !l.discount && !l.minimum && !/^Travel|^Sound|microphone|^Lighting|^MC|planning/i.test(l.label)) : [];
+      return `<form class="cform" data-id="${b.id}">
+        <div class="cgrid">
+          <label>Hours<input name="hours" type="number" min="1" max="12" step="0.5" value="${esc(f ? f.hours : b.data.hours || 4)}"></label>
+          <label>Rate / hr<input name="rate" type="number" min="${CFG.floorRate || 0}" step="5" value="${esc(rate)}"></label>
+          <label>Discount<select name="discountPct">${(CFG.discountOptions || [0, 10, 15, 20, 25]).map((p) => `<option value="${p}" ${Number(disc) === p ? "selected" : ""}>${p ? p + "% off" : "None"}</option>`).join("")}</select></label>
+          <label>Travel $<input name="travelCharge" type="number" min="0" step="5" value="${esc(travel)}"></label>
+          <label>Deposit $<input name="deposit" type="number" min="0" step="10" value="${esc(f ? f.deposit : CFG.deposit || 100)}"></label>
+          <label>Start time<input name="startTime" type="time" value="${esc(f ? f.startTime : b.data.startTime || "")}"></label>
+          <label>End time<input name="endTime" type="time" value="${esc(f ? f.endTime : "")}"></label>
+          <label>Venue<input name="venue" value="${esc(b.data.venue || "")}"></label>
+        </div>
+        <div class="adj">
+          ${[0, 1].map((i) => `<div class="cgrid2"><input name="adjLabel${i}" placeholder="Extra line (e.g. Ceremony audio)" value="${esc((adj[i] || {}).label || "")}"><input name="adjAmount${i}" type="number" step="5" placeholder="$" value="${esc((adj[i] || {}).amount || "")}"></div>`).join("")}
+        </div>
+        <label style="display:block;margin-top:8px">Note on the contract (optional)<input name="notes" value="${esc(f ? f.notes || "" : "")}" placeholder="e.g. Includes ceremony + reception, client provides table"></label>
+        <div class="cpreview muted">Working out totals…</div>
+        <button class="btn">${f ? "Resend updated contract" : "Send contract & invoice"}</button> <span class="form-msg" style="margin:0"></span>
+        <p class="hint" style="margin:8px 0 0">Discounts apply to DJ time only and never go below $${CFG.floorRate || 75}/hr or your area minimum.</p>
+      </form>`;
+    }
+    const formBody = (form) => {
+      const d = Object.fromEntries(new FormData(form));
+      d.adjustments = [0, 1].map((i) => ({ label: d["adjLabel" + i], amount: d["adjAmount" + i] })).filter((a) => a.label && Number(a.amount));
+      return d;
+    };
+
     shell("bookings", `
       <div class="top"><h1 class="t">DJ bookings</h1><span class="muted">${list.length} request${list.length === 1 ? "" : "s"}</span></div>
       ${list.length ? list.map((b) => {
         const e = b.data.estimate || {}, msg = quoteText(b), phone = String(b.phone || "").replace(/[^\d+]/g, "");
-        const quoteHtml = e.lines ? `<div><span>Suggested quote</span><span>${e.lines.map((l) => `${esc(l.label)}: <b>$${l.amount}</b>`).join("<br>")}
+        const quoteHtml = e.lines ? `<div><span>Suggested quote</span><span>${e.customType ? "<b>Custom quote</b>: set a rate below and send the contract" : `${e.lines.map((l) => `${esc(l.label)}: <b>${l.amount < 0 ? "−" : ""}$${Math.abs(l.amount)}</b>`).join("<br>")}
             <br><b class="lime" style="font-size:18px">Total $${e.total}${e.custom ? " + travel (you set it)" : ""}</b>${e.minApplied ? ` <span class="pill new">minimum applied</span>` : ""}
-            ${e.referred ? (e.referralSaves > 0 ? `<br><b class="lime">Referral price $${e.referralTotal}</b> <span class="muted">($${e.total} − $${e.referralSaves} referral discount)</span>`
-              : `<br><span class="muted">Referred, but already at the minimum, so no discount</span>`) : ""}
-            ${e.travel && e.travel.charge ? `<br><span class="muted" style="font-size:12px">Travel: ${e.travel.roundTripKm} km × $${e.travel.perKm}/km = $${e.travel.raw}, rounded up${e.travel.city.extra ? `, + $${e.travel.city.extra} parking/traffic` : ""}</span>` : ""}</span></div>` : "";
-        return `<details class="bk"><summary>
-          <div><b>${esc(b.name)}</b> · ${esc(b.event_type)} · ${esc(b.event_date)}${b.data.city ? ` · ${esc(b.data.city.split(" (")[0])}` : ""}<br><span class="muted" style="font-size:13px">${esc(b.ref)} · received ${fmtDate(b.created_at)}${b.data.referral ? " · referred" : ""}</span></div>
-          <b class="lime">${money(b.estimate_cents)}</b>
-          <select class="inline" data-id="${b.id}">${["new", "quoted", "confirmed", "declined"].map((s) => `<option ${s === b.status ? "selected" : ""}>${s}</option>`).join("")}</select></summary>
+            ${e.referred && !e.discount ? `<br><span class="muted">Referred, but no discount applies (club rate or already at the minimum)</span>` : ""}
+            ${e.travel && e.travel.charge ? `<br><span class="muted" style="font-size:12px">Travel: ${e.travel.roundTripKm} km × $${e.travel.perKm}/km = $${e.travel.raw}, rounded up${e.travel.city.extra ? `, + $${e.travel.city.extra} parking/traffic` : ""}</span>` : ""}`}</span></div>` : "";
+        return `<details class="bk" ${b.id === bookings.open ? "open" : ""}><summary>
+          <div><b>${esc(b.name)}</b> · ${esc(b.event_type)} · ${esc(b.event_date)}${b.data.city ? ` · ${esc(b.data.city.split(" (")[0])}` : ""}<br><span class="muted" style="font-size:13px">${esc(b.ref)} · received ${fmtDate(b.created_at)}${b.data.referral ? " · referred" : ""}${b.invoice_no ? " · " + esc(b.invoice_no) : ""}</span></div>
+          <b class="lime">${b.data.estimate && b.data.estimate.customType && !b.final ? "custom" : money(b.estimate_cents)}</b>
+          <select class="inline" data-id="${b.id}">${Object.keys(statusLabel).map((s) => `<option value="${s}" ${s === b.status ? "selected" : ""}>${statusLabel[s]}</option>`).join("")}</select></summary>
         <div class="body">
           <div><span>Contact</span><span><a class="lime" href="tel:${esc(phone)}">${esc(b.phone)}</a> · <a class="lime" href="mailto:${esc(b.email)}">${esc(b.email)}</a></span></div>
           ${fields.filter(([, k]) => b.data[k] && show(b.data[k]).length).map(([l, k]) => `<div><span>${l}</span><span>${esc(show(b.data[k]))}</span></div>`).join("")}
           ${quoteHtml}
-          ${msg ? `<div><span>Quote message</span><span><textarea class="qmsg" rows="3" style="font-size:14px">${esc(msg)}</textarea></span></div>` : ""}
-          <p style="margin:10px 0 0;display:flex;gap:8px;flex-wrap:wrap">
-            ${phone ? `<a class="btn sm" data-sms="${esc(phone)}" href="sms:${esc(phone)}">Text quote</a>` : ""}
+          ${msg && !b.final ? `<div><span>Quote message</span><span><textarea class="qmsg" rows="3" style="font-size:14px">${esc(msg)}</textarea>
+            <span style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px">
+            ${phone ? `<a class="btn sm ghost" data-sms="${esc(phone)}" href="sms:${esc(phone)}">Text quote</a>` : ""}
             <a class="btn sm ghost" data-mail="${esc(b.email)}" data-subj="${esc("Your Wild Soja quote (" + b.ref + ")")}" href="mailto:${esc(b.email)}">Email quote</a>
-            <button type="button" class="btn sm ghost" data-copy>Copy message</button></p>
+            <button type="button" class="btn sm ghost" data-copy>Copy message</button></span></span></div>` : ""}
+          ${contractPanel(b)}
         </div></details>`;
       }).join("") : '<div class="empty-state"><h3>No requests yet</h3><p>Share <b>yoursite.com/book</b> with clients. Their requests show up here.</p></div>'}`,
       { bookings: list.filter((b) => b.status === "new").length });
-    app.querySelectorAll("select[data-id]").forEach((s) => {
-      s.onclick = (ev) => ev.stopPropagation();
-      s.onchange = async () => { await api("/api/admin/bookings/" + s.dataset.id, { method: "PUT", body: { status: s.value } }); WN.toast("Updated"); };
+
+    app.querySelectorAll("select[data-id]").forEach((sel) => {
+      sel.onclick = (ev) => ev.stopPropagation();
+      sel.onchange = async () => { await api("/api/admin/bookings/" + sel.dataset.id, { method: "PUT", body: { status: sel.value } }); WN.toast("Updated"); };
     });
-    // Quote buttons use whatever is in the (editable) message box.
     app.querySelectorAll("details.bk").forEach((d) => {
-      const box = d.querySelector(".qmsg"); if (!box) return;
-      const sms = d.querySelector("[data-sms]"), mail = d.querySelector("[data-mail]");
-      const sync = () => {
-        if (sms) sms.href = `sms:${sms.dataset.sms}?&body=${encodeURIComponent(box.value)}`;
-        mail.href = `mailto:${mail.dataset.mail}?subject=${encodeURIComponent(mail.dataset.subj)}&body=${encodeURIComponent(box.value)}`;
-      };
-      box.oninput = sync; sync();
-      d.querySelector("[data-copy]").onclick = async () => { try { await navigator.clipboard.writeText(box.value); WN.toast("Copied"); } catch (e) { box.select(); } };
+      const box = d.querySelector(".qmsg");
+      if (box) {
+        const sms = d.querySelector("[data-sms]"), mail = d.querySelector("[data-mail]");
+        const sync = () => {
+          if (sms) sms.href = `sms:${sms.dataset.sms}?&body=${encodeURIComponent(box.value)}`;
+          mail.href = `mailto:${mail.dataset.mail}?subject=${encodeURIComponent(mail.dataset.subj)}&body=${encodeURIComponent(box.value)}`;
+        };
+        box.oninput = sync; sync();
+        d.querySelector("[data-copy]").onclick = async () => { try { await navigator.clipboard.writeText(box.value); WN.toast("Copied"); } catch (e) { box.select(); } };
+      }
     });
+    // Contract forms: live totals + send
+    app.querySelectorAll("form.cform").forEach((form) => {
+      const id = form.dataset.id, out = form.querySelector(".cpreview"), msg = form.querySelector(".form-msg");
+      let t;
+      const preview = () => { clearTimeout(t); t = setTimeout(async () => {
+        try {
+          const f = await api(`/api/admin/bookings/${id}/preview`, { method: "POST", body: formBody(form) });
+          out.innerHTML = `${lineRows(f.lines)}${f.hst ? `<div class="inv-row"><span>HST</span><b>${$$(f.hst)}</b></div>` : ""}
+            <div class="inv-row total"><span>Total</span><b class="lime">${$$(f.grandTotal)}</b></div>
+            <div class="inv-row"><span>Deposit now · balance on the day</span><b>${$$(f.deposit)} · ${$$(f.balance)}</b></div>`;
+        } catch (err) { out.textContent = err.message; }
+      }, 250); };
+      form.addEventListener("input", preview); preview();
+      form.onsubmit = async (ev) => {
+        ev.preventDefault();
+        const b = list.find((x) => String(x.id) === id);
+        if (!confirm(`Send the booking contract and invoice to ${b.email}?`)) return;
+        const btn = form.querySelector("button.btn"); btn.disabled = true;
+        try {
+          const r = await api(`/api/admin/bookings/${id}/send-contract`, { method: "POST", body: formBody(form) });
+          if (!r.emailed) prompt("Contract created, but email isn't set up, so it wasn't emailed. Send the client this link:", r.link);
+          else WN.toast("Contract & invoice sent");
+          bookings.open = Number(id); await bookings();
+        } catch (err) { msg.className = "form-msg err"; msg.textContent = err.message; btn.disabled = false; }
+      };
+    });
+    app.querySelectorAll("[data-act]").forEach((btn) => btn.onclick = async () => {
+      const label = btn.dataset.act === "deposit-received" ? "Mark the deposit as received and email the client a receipt?" : "Mark as paid in full and email the client a receipt?";
+      if (!confirm(label)) return;
+      const r = await api(`/api/admin/bookings/${btn.dataset.id}/${btn.dataset.act}`, { method: "POST", body: {} });
+      WN.toast(r.emailed ? "Saved · receipt emailed" : "Saved");
+      bookings.open = Number(btn.dataset.id); await bookings();
+    });
+    app.querySelectorAll("[data-copylink]").forEach((b) => b.onclick = async () => { try { await navigator.clipboard.writeText(b.dataset.copylink); WN.toast("Link copied"); } catch (e) { prompt("Copy this link:", b.dataset.copylink); } });
+    app.querySelectorAll("[data-edit]").forEach((b) => b.onclick = () => { const ed = app.querySelector(`[data-editor="${b.dataset.edit}"]`); ed.hidden = !ed.hidden; });
   }
 
   // ---------- Audience ----------

@@ -18,9 +18,13 @@
     const v = values();
     if (!v.type || !v.guests || !v.city) { box.hidden = true; return; }
     const q = WNPricing.calculate(C, v);
-    const price = q.referred && q.referralSaves > 0 ? q.referralTotal : q.total;
-    $("estAmount").textContent = "$" + price + (q.custom ? " + travel" : "");
-    $("estNote").textContent = (q.referred && q.referralSaves > 0 ? "Referral discount included. " : "") +
+    if (q.customType) {
+      $("estAmount").textContent = "Custom quote";
+      $("estNote").textContent = "Running sound for a whole event depends on the setup, so we'll put together a quote for you.";
+      box.hidden = false; return;
+    }
+    $("estAmount").textContent = "$" + q.total + (q.custom ? " + travel" : "");
+    $("estNote").textContent = (q.discount ? `Referral discount (${q.discountPct}%) included. ` : "") +
       (q.custom ? "Travel is added once we know where you are. " : "") +
       "Includes DJ, sound for your crowd, equipment and travel. Your final price is confirmed in your quote.";
     box.hidden = false;

@@ -10,6 +10,7 @@ const T = require("./lib/ticketing");
 const stripe = require("./lib/stripe");
 const mail = require("./lib/mail");
 const audience = require("./lib/audience");
+const contract = require("./lib/contract");
 const BOOKING = require("./public/assets/js/booking-config.js");
 const Pricing = require("./public/assets/js/pricing.js");
 
@@ -220,7 +221,7 @@ app.post("/api/bookings", (req, res) => {
   const ref = "WS-" + T.randomCode(6);
   const label = BOOKING.eventTypes[v.type].label;
   q.run(`INSERT INTO bookings (ref, name, email, phone, event_type, event_date, estimate_cents, data) VALUES (?,?,?,?,?,?,?,?)`,
-    ref, v.name, v.email, v.phone, label, v.date, Math.round((quote.referred ? quote.referralTotal : quote.total) * 100), JSON.stringify({ ...v, estimate: quote }));
+    ref, v.name, v.email, v.phone, label, v.date, Math.round(quote.total * 100), JSON.stringify({ ...v, estimate: quote }));
   audience.upsertContact({ email: v.email, name: v.name, phone: v.phone, source: "booking", impliedMonths: 6, optOut: !!b.noUpdates });
   const where = v.city && !quote.custom ? v.city : v.location || v.city || "?";
   mail.notifyOwner(`🎧 Booking request: ${label}, ${v.date}, ${where}`, [
@@ -233,8 +234,9 @@ app.post("/api/bookings", (req, res) => {
     "",
     "SUGGESTED QUOTE",
     ...quote.lines.map((l) => `${l.label}: $${l.amount}`),
-    `Total: $${quote.total}${quote.custom ? " + travel (quote it yourself)" : ""}${quote.minApplied ? ` (minimum $${quote.minimum} applied)` : ""}`,
-    quote.referred ? (quote.referralSaves > 0 ? `Referral price: $${quote.referralTotal}` : "Referred, but already at the minimum (no discount)") : "",
+    quote.customType ? "Total: custom quote (build it in /admin)"
+      : `Total: $${quote.total}${quote.custom ? " + travel (quote it yourself)" : ""}${quote.minApplied ? ` (minimum $${quote.minimum} applied)` : ""}${quote.discount ? ` (full price $${quote.fullPrice})` : ""}`,
+    quote.referred && !quote.discount && !quote.customType ? "Referred, but no discount applies (club rate or already at the minimum)" : "",
     "",
     `Ref ${ref}. Hit reply to answer ${v.name.split(" ")[0]} directly, or use /admin → DJ bookings.`,
   ].filter((x) => x !== "").join("\n"), { to: mail.bookingsInbox(), replyTo: v.email });
@@ -477,10 +479,110 @@ app.post("/api/admin/posts", savePost);
 app.put("/api/admin/posts/:id", savePost);
 app.delete("/api/admin/posts/:id", (req, res) => { q.run(`DELETE FROM posts WHERE id=?`, req.params.id); res.json({ ok: true }); });
 
-app.get("/api/admin/bookings", (req, res) => res.json(q.all(`SELECT * FROM bookings ORDER BY created_at DESC LIMIT 500`).map((b) => ({ ...b, data: JSON.parse(b.data) }))));
+app.get("/api/admin/bookings", (req, res) => res.json(q.all(`SELECT * FROM bookings ORDER BY created_at DESC LIMIT 500`)
+  .map((b) => ({ ...b, data: JSON.parse(b.data), final: b.final ? JSON.parse(b.final) : null, link: b.token ? `${baseUrl(req)}/booking/${b.ref}?k=${b.token}` : null }))));
+
+// ---- DJ booking contract & invoice ----
+const BOOKING_STATUSES = ["new", "quoted", "contract_sent", "signed", "confirmed", "paid", "declined", "cancelled"];
+const bookingLink = (req, b) => `${baseUrl(req)}/booking/${b.ref}?k=${b.token}`;
+function fmtEventDate(d) { return d ? new Date(d + "T12:00:00").toLocaleDateString("en-CA", { weekday: "long", month: "long", day: "numeric", year: "numeric" }) : "Date TBC"; }
+function fmtTime(t) { if (!t) return ""; const [h, m] = t.split(":").map(Number); return new Date(2000, 0, 1, h, m).toLocaleTimeString("en-CA", { hour: "numeric", minute: "2-digit" }); }
+const loadFinal = (b) => ({ ...JSON.parse(b.final), depositPaidAt: b.deposit_paid_at, paidAt: b.paid_at, signedAt: b.signed_at });
+
+// Preview or send: build the final invoice from the request + your adjustments.
+function buildFinal(b, body) {
+  const data = JSON.parse(b.data);
+  const o = body || {};
+  const v = { ...data, hours: o.hours ?? data.hours, venue: o.venue ?? data.venue, startTime: o.startTime ?? data.startTime,
+    rate: o.rate === "" || o.rate == null ? undefined : Number(o.rate), discountPct: o.discountPct === "" || o.discountPct == null ? undefined : Number(o.discountPct),
+    travelCharge: o.travelCharge === "" || o.travelCharge == null ? undefined : Number(o.travelCharge),
+    adjustments: (Array.isArray(o.adjustments) ? o.adjustments : []).slice(0, 10).map((a) => ({ label: clean(a.label, 80), amount: Number(a.amount) || 0 })) };
+  const qt = Pricing.calculate(BOOKING, v);
+  if (qt.customType) throw new T.OrderError("Set an hourly rate for this custom booking first");
+  const deposit = Math.min(qt.grandTotal, Math.max(0, o.deposit === "" || o.deposit == null ? BOOKING.deposit : Number(o.deposit)));
+  const endTime = clean(o.endTime, 5);
+  const f = {
+    lines: qt.lines, total: qt.total, hst: qt.hst, grandTotal: qt.grandTotal, deposit, balance: Math.round((qt.grandTotal - deposit) * 100) / 100,
+    rate: qt.rate, hours: qt.hours, discountPct: qt.discountPct, startTime: v.startTime || "", endTime,
+    dateText: fmtEventDate(data.date), timeText: [fmtTime(v.startTime), fmtTime(endTime)].filter(Boolean).join(" – ") + (v.startTime ? ` (${qt.hours} hrs)` : ""),
+    whereText: [v.venue, data.city && !/else/i.test(data.city) ? data.city.split(" (")[0] : data.location].filter(Boolean).join(", ") || "Location TBC",
+    services: [qt.sound.label, ...(data.mics && data.mics !== "0" ? [`${data.mics} microphone${data.mics === "1" ? "" : "s"}`] : []), ...(data.extras || [])],
+    notes: clean(o.notes, 1000),
+  };
+  return f;
+}
+
+app.post("/api/admin/bookings/:id/preview", (req, res) => {
+  const b = q.get(`SELECT * FROM bookings WHERE id=?`, req.params.id);
+  if (!b) return res.status(404).json({ error: "Not found" });
+  try { res.json(buildFinal(b, req.body)); } catch (e) { if (e instanceof T.OrderError) return res.status(400).json({ error: e.message }); throw e; }
+});
+
+app.post("/api/admin/bookings/:id/send-contract", wrap(async (req, res) => {
+  const b = q.get(`SELECT * FROM bookings WHERE id=?`, req.params.id);
+  if (!b) return res.status(404).json({ error: "Not found" });
+  let f;
+  try { f = buildFinal(b, req.body); } catch (e) { if (e instanceof T.OrderError) return res.status(400).json({ error: e.message }); throw e; }
+  if (b.signed_at) return res.status(400).json({ error: "This contract is already signed. Cancel it and create a new booking to change the terms." });
+  f.invoiceNo = b.invoice_no || contract.nextInvoiceNo();
+  f.terms = contract.terms(f); // frozen: the client signs exactly this text
+  f.issuedAt = new Date().toISOString();
+  const token = b.token || contract.newToken();
+  q.run(`UPDATE bookings SET final=?, invoice_no=?, token=?, contract_sent_at=datetime('now'), status='contract_sent', estimate_cents=? WHERE id=?`,
+    JSON.stringify(f), f.invoiceNo, token, Math.round(f.grandTotal * 100), b.id);
+  const fresh = q.get(`SELECT * FROM bookings WHERE id=?`, b.id), link = bookingLink(req, fresh);
+  const m = contract.contractEmail(fresh, f, link, baseUrl(req));
+  const emailed = await mail.send({ to: b.email, replyTo: mail.bookingsInbox(), bcc: mail.bookingsInbox(), ...m });
+  res.json({ ok: true, link, emailed, invoiceNo: f.invoiceNo });
+}));
+
+async function markPaid(req, res, kind) {
+  const b = q.get(`SELECT * FROM bookings WHERE id=?`, req.params.id);
+  if (!b || !b.final) return res.status(400).json({ error: "Send the contract first" });
+  if (kind === "deposit") q.run(`UPDATE bookings SET deposit_paid_at=COALESCE(deposit_paid_at, datetime('now')), status=CASE WHEN paid_at IS NULL THEN 'confirmed' ELSE status END WHERE id=?`, b.id);
+  else q.run(`UPDATE bookings SET deposit_paid_at=COALESCE(deposit_paid_at, datetime('now')), paid_at=COALESCE(paid_at, datetime('now')), status='paid' WHERE id=?`, b.id);
+  const fresh = q.get(`SELECT * FROM bookings WHERE id=?`, b.id);
+  const emailed = req.body && req.body.notify === false ? false
+    : await mail.send({ to: b.email, replyTo: mail.bookingsInbox(), ...contract.receiptEmail(fresh, loadFinal(fresh), bookingLink(req, fresh), baseUrl(req), kind) });
+  res.json({ ok: true, emailed });
+}
+app.post("/api/admin/bookings/:id/deposit-received", wrap((req, res) => markPaid(req, res, "deposit")));
+app.post("/api/admin/bookings/:id/paid-in-full", wrap((req, res) => markPaid(req, res, "paid")));
+
+// Client-facing booking page (contract + invoice), protected by the secret link.
+function bookingForToken(ref, k) {
+  const b = q.get(`SELECT * FROM bookings WHERE ref=?`, String(ref));
+  if (!b || !b.token || !k || b.token.length !== String(k).length || !crypto.timingSafeEqual(Buffer.from(b.token), Buffer.from(String(k)))) return null;
+  return b;
+}
+app.get("/api/booking/:ref", (req, res) => {
+  const b = bookingForToken(req.params.ref, req.query.k);
+  if (!b || !b.final) return res.status(404).json({ error: "Booking not found" });
+  const f = loadFinal(b);
+  res.json({ ref: b.ref, name: b.name, email: b.email, phone: b.phone, eventType: b.event_type, status: b.status, final: f,
+    signedName: b.signed_name, signedAt: b.signed_at, depositPaidAt: b.deposit_paid_at, paidAt: b.paid_at,
+    business: { name: BOOKING.contract.businessName, email: BOOKING.bookingEmail, phone: BOOKING.brand.phone, city: BOOKING.contract.city, hst: BOOKING.contract.hst } });
+});
+app.post("/api/booking/:ref/sign", wrap(async (req, res) => {
+  const b = bookingForToken(req.params.ref, (req.body || {}).k);
+  if (!b || !b.final) return res.status(404).json({ error: "Booking not found" });
+  if (b.signed_at) return res.json({ ok: true, already: true });
+  const name = clean((req.body || {}).name, 120);
+  if (name.length < 2 || !(req.body || {}).agree) return res.status(400).json({ error: "Type your full name and tick the box to accept" });
+  if (["cancelled", "declined"].includes(b.status)) return res.status(400).json({ error: "This booking is no longer active. Please contact us." });
+  q.run(`UPDATE bookings SET signed_at=datetime('now'), signed_name=?, signed_ip=?, status=CASE WHEN deposit_paid_at IS NULL THEN 'signed' ELSE status END WHERE id=?`,
+    name, req.ip, b.id);
+  const fresh = q.get(`SELECT * FROM bookings WHERE id=?`, b.id), f = loadFinal(fresh), link = bookingLink(req, fresh);
+  mail.send({ to: b.email, replyTo: mail.bookingsInbox(), ...contract.signedEmail(fresh, f, link, baseUrl(req)) });
+  mail.notifyOwner(`✍️ Contract signed: ${b.name}, ${b.event_type} (${f.invoiceNo})`,
+    `${name} accepted the contract for ${f.dateText}.\nTotal ${contract.money(f.grandTotal)}, deposit ${contract.money(f.deposit)} ${fresh.deposit_paid_at ? "received" : "not received yet: watch for the e-Transfer"}.\n${link}`,
+    { to: mail.bookingsInbox() });
+  res.json({ ok: true });
+}));
+
 app.put("/api/admin/bookings/:id", (req, res) => {
   const s = (req.body || {}).status;
-  if (!["new", "quoted", "confirmed", "declined"].includes(s)) return res.status(400).json({ error: "Bad status" });
+  if (!BOOKING_STATUSES.includes(s)) return res.status(400).json({ error: "Bad status" });
   q.run(`UPDATE bookings SET status=? WHERE id=?`, s, req.params.id);
   res.json({ ok: true });
 });
@@ -538,6 +640,7 @@ app.use("/uploads", express.static(UPLOADS, { maxAge: "30d" }));
 app.get("/event/:slug", (req, res) => res.sendFile(path.join(PUBLIC, "event.html")));
 app.get("/blog/:slug", (req, res) => res.sendFile(path.join(PUBLIC, "post.html")));
 app.get("/order/:id", (req, res) => res.sendFile(path.join(PUBLIC, "order.html")));
+app.get("/booking/:ref", (req, res) => res.sendFile(path.join(PUBLIC, "booking.html")));
 app.get("/t/:token", (req, res) => res.sendFile(path.join(PUBLIC, "ticket.html")));
 app.get("/tickets", (req, res) => res.redirect(301, "/events"));
 app.use(express.static(PUBLIC, { extensions: ["html"], maxAge: "1h" }));

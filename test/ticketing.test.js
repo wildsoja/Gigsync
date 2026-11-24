@@ -89,33 +89,70 @@ test("order page needs the secret key; admin API needs sign-in", async () => {
   assert.equal((await fetch(base + "/api/admin/summary", { headers: { cookie } })).status, 200);
 });
 
-test("DJ quote: $100/hr, travel from Hamilton by city, referral discount", async () => {
+test("DJ quote: rates by event type, travel, minimums, crowd, referral %", async () => {
   const C = require("../public/assets/js/booking-config.js"), P = require("../public/assets/js/pricing.js");
-  const quote = (city, extra = {}) => P.calculate(C, { type: "birthday", hours: 4, city, ...extra });
-  assert.equal(quote("Hamilton (incl. Stoney Creek, Ancaster, Dundas, Waterdown)").total, 400);
-  assert.equal(quote("St. Catharines").travel.charge, 25);
-  assert.equal(quote("Toronto: Downtown / Midtown").travel.charge, 50);
-  assert.equal(quote("Somewhere else").custom, true);
-  assert.equal(quote("Hamilton (incl. Stoney Creek, Ancaster, Dundas, Waterdown)", { referral: "Kemi" }).referralTotal, 350);
-  // minimum to leave the house
   const H = "Hamilton (incl. Stoney Creek, Ancaster, Dundas, Waterdown)";
-  assert.equal(quote(H, { hours: 2 }).total, 200);
-  assert.equal(quote("St. Catharines", { hours: 2 }).total, 250);
-  assert.equal(quote("Toronto: Downtown / Midtown", { hours: 2 }).total, 250);
-  assert.equal(quote(H, { hours: 2, referral: "x" }).referralTotal, 200, "referral never goes below the minimum");
-  // crowd decides the speakers; venue sound skips it
-  assert.equal(quote(H, { guests: 80 }).total, 400);
-  assert.equal(quote(H, { guests: 150 }).total, 450);
-  assert.equal(quote(H, { guests: 250 }).total, 500);
-  assert.equal(quote(H, { guests: 150, venueSound: "yes" }).total, 400);
-  assert.equal(quote(H, { extras: ["Lighting"], mics: 1 }).total, 475);
-  assert.equal(quote(H, { mics: 2 }).total, 450, "more mics, more money");
+  const quote = (type, city, extra = {}) => P.calculate(C, { type, hours: 4, city, ...extra });
+  // rates per event type
+  assert.equal(quote("private", H).total, 360);           // $90/hr home events
+  assert.equal(quote("club", H).total, 400);              // $100/hr paid events
+  assert.equal(quote("corporate", H).total, 500);         // $125/hr
+  assert.equal(quote("wedding", H, { hours: 6 }).total, 900); // $125/hr + $150 planning
+  assert.equal(quote("production", H).customType, true);  // custom quote
+  // travel
+  assert.equal(quote("private", "St. Catharines").travel.charge, 25);
+  assert.equal(quote("private", "Toronto: Downtown / Midtown").travel.charge, 50);
+  assert.equal(quote("private", "Somewhere else").custom, true);
+  // minimums
+  assert.equal(quote("private", H, { hours: 2 }).total, 200);
+  assert.equal(quote("private", "St. Catharines", { hours: 2 }).total, 250);
+  assert.equal(quote("club", "Toronto: Downtown / Midtown", { hours: 2 }).total, 250);
+  // referral: 15% off DJ time in $5 steps, never below $75/hr or the minimum; no referral discount on club gigs
+  assert.equal(quote("private", H, { referral: "Kemi" }).total, 310);
+  assert.equal(quote("wedding", H, { hours: 6, referral: "Kemi" }).total, 790);
+  assert.equal(quote("club", H, { referral: "Kemi" }).total, 400);
+  assert.equal(quote("private", H, { hours: 2, referral: "x" }).total, 200);
+  assert.equal(quote("private", H, { discountPct: 25 }).total, 300, "capped at $75/hr");
+  assert.equal(quote("birthday", H, { rate: 100, discountPct: 25 }).total, 300);
+  // crowd decides the speakers; venue sound skips it; more equipment, more money
+  assert.equal(quote("club", H, { guests: 150 }).total, 450);
+  assert.equal(quote("club", H, { guests: 250 }).total, 500);
+  assert.equal(quote("club", H, { guests: 150, venueSound: "yes" }).total, 400);
+  assert.equal(quote("club", H, { extras: ["Lighting"], mics: 1 }).total, 475);
+  assert.equal(quote("club", H, { mics: 2 }).total, 450);
 
-  const r = await post("/api/bookings", { name: "X", email: "x@x.co", phone: "905", type: "wedding", hours: "4", city: "St. Catharines", date: "2099-03-03", referral: "Kemi" });
+  const r = await post("/api/bookings", { name: "X Client", email: "x@x.co", phone: "905", type: "private", hours: "4", city: "St. Catharines", guests: "80", date: "2099-03-03", referral: "Kemi" });
   assert.equal(r.status, 200);
   const b = q.get(`SELECT estimate_cents, data FROM bookings ORDER BY id DESC LIMIT 1`);
-  assert.equal(b.estimate_cents, 37500); // 400 + 25 travel − 50 referral
-  assert.equal(JSON.parse(b.data).estimate.total, 425);
+  assert.equal(b.estimate_cents, 33500); // 360 + 25 travel − 50 referral
+});
+
+test("booking contract: send, client signs, deposit, paid in full", async () => {
+  const cookie = (await post("/api/admin/login", { password: "pw" })).headers.get("set-cookie").split(";")[0];
+  const b = q.get(`SELECT * FROM bookings ORDER BY id DESC LIMIT 1`);
+  let r = await post(`/api/admin/bookings/${b.id}/preview`, { hours: 4, rate: 90, discountPct: 15, deposit: 100, adjustments: [{ label: "Ceremony audio", amount: 50 }] }, { cookie });
+  const pv = await r.json();
+  assert.equal(pv.grandTotal, 385); // 360 + 25 travel + 50 ceremony − 50 discount
+  assert.equal(pv.balance, 285);
+  r = await post(`/api/admin/bookings/${b.id}/send-contract`, { hours: 4, rate: 90, discountPct: 15, deposit: 100, endTime: "23:00", adjustments: [{ label: "Ceremony audio", amount: 50 }] }, { cookie });
+  const sent = await r.json();
+  assert.match(sent.invoiceNo, /^INV-\d{4}-\d{4}$/);
+  const url = new URL(sent.link);
+  const k = url.searchParams.get("k"), ref = url.pathname.split("/").pop();
+  assert.equal((await fetch(`${base}/api/booking/${ref}?k=wrong`)).status, 404);
+  const view = await (await fetch(`${base}/api/booking/${ref}?k=${k}`)).json();
+  assert.equal(view.final.grandTotal, 385);
+  assert.ok(view.final.terms.some(([t]) => /Cancellation by the Client/.test(t)));
+  assert.ok(view.final.terms.some(([t]) => /Date or time changes/.test(t)));
+  assert.equal((await post(`/api/booking/${ref}/sign`, { k, name: "X Client" })).status, 400, "must tick agree");
+  assert.equal((await post(`/api/booking/${ref}/sign`, { k, name: "X Client", agree: true })).status, 200);
+  assert.equal(q.get(`SELECT status FROM bookings WHERE id=?`, b.id).status, "signed");
+  assert.equal((await post(`/api/admin/bookings/${b.id}/send-contract`, { rate: 50 }, { cookie })).status, 400, "signed contracts can't be changed");
+  await post(`/api/admin/bookings/${b.id}/deposit-received`, {}, { cookie });
+  assert.equal(q.get(`SELECT status FROM bookings WHERE id=?`, b.id).status, "confirmed");
+  await post(`/api/admin/bookings/${b.id}/paid-in-full`, {}, { cookie });
+  const done = await (await fetch(`${base}/api/booking/${ref}?k=${k}`)).json();
+  assert.equal(done.status, "paid"); assert.ok(done.paidAt && done.depositPaidAt && done.signedAt);
 });
 
 test("blog: drafts are hidden, posts need admin to create", async () => {

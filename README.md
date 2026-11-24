@@ -70,7 +70,8 @@ Back up `DATA_DIR` (`wildnation.db`, `secret.key`, `uploads/`). If `secret.key` 
 - **DJ rate, referral discount, gas price, travel cities:** `public/assets/js/booking-config.js`
 
 ### How DJ quotes are worked out (only you see them)
-- $100/hour (4 hours = $400). If the client says they were referred, a $50 referral price is shown too (4 hours = $350).
+- **Hourly rate by event type:** home/house parties, birthdays and community events $90/hr · club, bar & lounge (paid events) $100/hr · school/prom $110/hr · corporate and festivals $125/hr · weddings $125/hr + $150 planning/timeline/MC prep · "Full event sound & entertainment" is a custom quote you build in admin. Change any of these under `eventTypes`.
+- **Referral discount:** 15% off DJ time (in $5 steps). In admin you can set any booking to 0/10/15/20/25%. Discounts never take DJ time below **$75/hr** (`floorRate`) or the area minimum. Club gigs don't get the referral discount.
 - **Minimum to leave the house:** $200 in Hamilton, $250 anywhere else. If a request adds up to less, the quote is raised to the minimum (a referral discount can't go below it either).
 - **Sound by crowd size** (client picks a guest range): up to 80 guests = 1 speaker (included), 81–150 = 2 speakers +$50, 151–250 = 2 speakers + sub +$100, 250+ = full PA +$150. If the venue has its own sound system, this is skipped.
 - **Equipment:** microphones (1 mic +$25, 2 mics +$50), lighting +$50, MC/hosting +$50. Any event type can also carry a flat `extra` (e.g. weddings).
@@ -79,6 +80,14 @@ Back up `DATA_DIR` (`wildnation.db`, `secret.key`, `uploads/`). If `secret.key` 
 - **Deposit:** the confirmation screen and your quote message ask for a $100 deposit by Interac e-Transfer to bookings.soja@gmail.com (`deposit` / `bookingEmail` in the settings file).
 - Travel from Hamilton: round-trip km × (gas $1.60/L × 11 L/100 km + 5¢/km wear) ≈ 23¢/km, rounded up to the nearest $5. Toronto areas add $15 for parking/traffic. Hamilton itself is free. Examples: Burlington $10, St. Catharines $25, Niagara Falls $35, downtown Toronto $50. Change `fuelPrice` when gas moves.
 - In `/admin` → DJ bookings, each request shows the breakdown and a ready-to-send message. Edit it if you like, then tap **Text quote** or **Email quote**.
+
+### Booking contract & invoice
+1. In `/admin` → DJ bookings, open a request and use **Contract & invoice**: set the final hours, rate, discount, travel, deposit, start/end time and up to two custom lines (e.g. "Ceremony audio"). Totals update as you type.
+2. **Send contract & invoice** emails the client (copy to the bookings inbox) a link to their booking page: details, invoice `INV-YYYY-####`, deposit instructions (Interac e-Transfer to bookings.soja@gmail.com, invoice number in the message) and the terms.
+3. The client types their name and accepts. The signature, time and IP are recorded, and you get an email. The terms they signed are saved with the booking, so later edits to the template don't change signed contracts. Signed contracts are locked.
+4. When the e-Transfer arrives, click **Mark deposit received**, then later **Mark paid in full**. The client gets a receipt each time. Their page can be saved as a PDF from the browser.
+- **Terms** (deposit, payment, client cancellation, date changes, cancellation by you, overtime, setup/venue needs, equipment & safety, music, meals, photos, events outside anyone's control, liability) are in `lib/contract.js`. The numbers (cancellation window, reschedule notice, setup time, HST) are under `contract` in the settings file. **Have a lawyer review the terms once before relying on them.**
+- **HST:** off by default (small suppliers under $30k/yr don't have to register). Once registered, set `hst.registered: true` and your number; 13% is added to invoices.
 - **Blog posts & past-event recaps:** write and edit them in `/admin` → Blog. The 9 original recaps are loaded as posts on first run. Posts support headings, **bold**, links, images, pull quotes and YouTube embeds (paste the link on its own line).
 - **Contact info / socials:** top of `public/assets/js/site.js`
 - **Colours & fonts:** top of `public/assets/css/site.css`

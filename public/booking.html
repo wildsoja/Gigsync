@@ -1,0 +1,127 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#08060d">
+<meta name="robots" content="noindex">
+<link rel="icon" href="/img/icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Anton&family=JetBrains+Mono:wght@500&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/assets/css/site.css">
+<title>Your booking | Wild Soja</title>
+<style>
+  .doc{max-width:820px;margin:0 auto}
+  .doc-card{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:clamp(22px,4vw,40px);margin-bottom:22px}
+  .doc h2{font-family:var(--display);font-weight:400;text-transform:uppercase;font-size:30px;margin:0 0 16px}
+  .meta-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px 24px;margin-bottom:6px}
+  .meta-grid small{display:block;color:var(--muted);font-size:12px;text-transform:uppercase;letter-spacing:.1em}
+  .inv{width:100%;border-collapse:collapse;font-size:15px}
+  .inv td{padding:9px 0;border-bottom:1px solid var(--line)}
+  .inv td:last-child{text-align:right;white-space:nowrap}
+  .inv tr.total td{font-weight:700;font-size:18px;border-bottom:0;padding-top:14px}
+  .inv tr.sub td{color:var(--muted);border-bottom:0;padding:4px 0}
+  .terms ol{padding-left:20px;margin:0}
+  .terms li{margin-bottom:14px;color:#d6cfe6}
+  .terms li b{color:var(--text);display:block;margin-bottom:2px}
+  .pay{border-color:rgba(214,251,81,.35);background:rgba(214,251,81,.05)}
+  .status-bar{display:flex;gap:10px;flex-wrap:wrap;margin:18px 0 0}
+  .status-bar span{font-size:12px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;padding:7px 11px;border-radius:999px;border:1px solid var(--line-2);color:var(--muted)}
+  .status-bar span.on{background:var(--lime);border-color:var(--lime);color:#000}
+  .sigline{font-family:"Brush Script MT","Segoe Script",cursive;font-size:34px;color:var(--text)}
+  @media print{
+    body{background:#fff !important;color:#000 !important}
+    .doc-card{border:1px solid #bbb;background:#fff;color:#000;break-inside:avoid-page}
+    .terms li,.inv td,.meta-grid small,.muted{color:#222 !important}
+    .terms li b,.sigline,.doc h2,.doc h1{color:#000 !important}
+    .lime{color:#000 !important}
+    .no-print,.nav,.footer{display:none !important}
+    .center-page{padding-top:10px}
+  }
+</style>
+</head>
+<body data-solid-nav="1" data-no-footer="1">
+<main class="center-page"><div class="wrap doc" id="root"><p class="muted" style="text-align:center">Loading your booking…</p></div></main>
+<script src="/assets/js/site.js"></script>
+<script>
+(async function () {
+  const root = document.getElementById("root"), esc = WN.esc;
+  const ref = location.pathname.split("/").pop(), k = new URLSearchParams(location.search).get("k") || "";
+  const $$ = (n) => "$" + Number(n || 0).toLocaleString("en-CA", { minimumFractionDigits: n % 1 ? 2 : 0, maximumFractionDigits: 2 });
+  const when = (s) => s ? new Date(s.replace(" ", "T") + (s.includes("Z") || s.includes("T") ? "" : "Z")).toLocaleString("en-CA", { dateStyle: "long", timeStyle: "short" }) : "";
+  async function load() {
+    let d;
+    try { d = await WN.api(`/api/booking/${encodeURIComponent(ref)}?k=${encodeURIComponent(k)}`); }
+    catch (e) { root.innerHTML = '<div class="empty-state"><h3>Booking not found</h3><p>Check the link in your email, or contact bookings.soja@gmail.com.</p></div>'; return; }
+    const f = d.final, first = esc(String(d.name).split(/\s+/)[0]);
+    document.title = `Booking ${f.invoiceNo} | Wild Soja`;
+    const steps = [["Contract", !!d.signedAt], ["Deposit", !!d.depositPaidAt], ["Paid in full", !!d.paidAt]];
+    root.innerHTML = `
+      <div class="order-head" style="text-align:left;max-width:none;margin-bottom:26px">
+        <span class="eyebrow">Wild Soja · ${esc(f.invoiceNo)}</span>
+        <h1 class="display h-md" style="margin:12px 0 8px">${d.signedAt ? (d.depositPaidAt ? "You're booked!" : "Signed. One last step") : "Your booking contract"}</h1>
+        <p class="muted" style="margin:0">${d.signedAt ? (d.depositPaidAt ? `Thanks ${first}, your date is locked in.` : `Thanks ${first}! Send your deposit to lock in the date.`) : `Hi ${first}, please review your booking below, then accept the agreement at the bottom.`}</p>
+        <div class="status-bar">${steps.map(([l, on]) => `<span class="${on ? "on" : ""}">${on ? "✓ " : ""}${l}</span>`).join("")}</div>
+        <p class="no-print" style="margin-top:18px"><button class="btn ghost sm" onclick="print()">Save as PDF / print</button></p>
+      </div>
+
+      <section class="doc-card">
+        <h2>Booking details</h2>
+        <div class="meta-grid">
+          <div><small>Client</small>${esc(d.name)}<br><span class="muted">${esc(d.email)} · ${esc(d.phone)}</span></div>
+          <div><small>Performer</small>${esc(d.business.name)}<br><span class="muted">${esc(d.business.email)} · ${esc(d.business.phone)}</span></div>
+          <div><small>Event</small>${esc(d.eventType)}</div>
+          <div><small>Date</small>${esc(f.dateText)}</div>
+          <div><small>Time</small>${esc(f.timeText || "To be confirmed")}</div>
+          <div><small>Location</small>${esc(f.whereText)}</div>
+          <div><small>Services</small>DJ (${esc(f.hours)} hrs)${f.services && f.services.length ? ", " + f.services.map(esc).join(", ") : ""}</div>
+          ${f.notes ? `<div><small>Notes</small>${esc(f.notes)}</div>` : ""}
+        </div>
+      </section>
+
+      <section class="doc-card">
+        <h2>Invoice ${esc(f.invoiceNo)}</h2>
+        <p class="muted" style="margin:-8px 0 14px;font-size:13px">Issued ${esc(new Date(f.issuedAt).toLocaleDateString("en-CA", { dateStyle: "long" }))}${d.business.hst && d.business.hst.registered ? ` · HST # ${esc(d.business.hst.number)}` : ""}</p>
+        <table class="inv">
+          ${f.lines.filter((l) => l.amount !== 0 || l.dj).map((l) => `<tr><td>${esc(l.label)}</td><td class="${l.amount < 0 ? "lime" : ""}">${l.amount < 0 ? "−" : ""}${$$(Math.abs(l.amount))}</td></tr>`).join("")}
+          ${f.hst ? `<tr><td>HST (${d.business.hst.rate}%)</td><td>${$$(f.hst)}</td></tr>` : ""}
+          <tr class="total"><td>Total</td><td>${$$(f.grandTotal)}</td></tr>
+          <tr class="sub"><td>Deposit ${d.depositPaidAt ? "(received ✓)" : "(due now)"}</td><td>${$$(f.deposit)}</td></tr>
+          <tr class="sub"><td>Balance ${d.paidAt ? "(paid ✓)" : "(due on the day of the event)"}</td><td>${$$(f.balance)}</td></tr>
+        </table>
+      </section>
+
+      ${!d.depositPaidAt ? `<section class="doc-card pay">
+        <h2>How to pay your deposit</h2>
+        <p style="margin:0">Send <b>${$$(f.deposit)}</b> by <b>Interac e-Transfer</b> to <b class="lime">${esc(d.business.email)}</b> and put <b>${esc(f.invoiceNo)}</b> in the message. Your date is held once the deposit arrives and the agreement is accepted. You'll get a receipt by email.</p>
+      </section>` : ""}
+
+      <section class="doc-card terms">
+        <h2>Terms & conditions</h2>
+        <ol>${f.terms.map(([t, body]) => `<li><b>${esc(t)}</b>${esc(body)}</li>`).join("")}</ol>
+      </section>
+
+      <section class="doc-card" id="sign">
+        <h2>Agreement</h2>
+        ${d.signedAt ? `<p class="muted" style="margin:0 0 6px">Accepted electronically by</p><div class="sigline">${esc(d.signedName)}</div>
+          <p class="muted" style="margin:6px 0 0">${esc(when(d.signedAt))} · ${esc(d.email)}</p>`
+        : `<form id="sf" novalidate>
+            <p style="margin:0 0 14px">By typing your full name and accepting, you agree to the booking details, invoice and terms above.</p>
+            <div class="field"><label for="sname">Your full name</label><input id="sname" autocomplete="name" placeholder="${esc(d.name)}" required></div>
+            <label class="optin" style="margin:0 0 16px"><input type="checkbox" id="agree"> I have read and agree to the Wild Soja booking terms and conditions.</label>
+            <button class="btn lg">Accept & sign</button><div class="form-msg err" id="serr"></div>
+          </form>`}
+      </section>`;
+    const sf = document.getElementById("sf");
+    if (sf) sf.onsubmit = async (e) => {
+      e.preventDefault();
+      const btn = sf.querySelector("button"); btn.disabled = true;
+      try { await WN.api(`/api/booking/${encodeURIComponent(ref)}/sign`, { method: "POST", body: { k, name: document.getElementById("sname").value, agree: document.getElementById("agree").checked } }); await load(); scrollTo({ top: 0, behavior: "smooth" }); }
+      catch (err) { document.getElementById("serr").textContent = err.message; btn.disabled = false; }
+    };
+  }
+  load();
+})();
+</script>
+</body>
+</html>
