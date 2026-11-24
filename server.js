@@ -9,6 +9,7 @@ const { q, DATA_DIR } = require("./lib/db");
 const T = require("./lib/ticketing");
 const stripe = require("./lib/stripe");
 const mail = require("./lib/mail");
+const audience = require("./lib/audience");
 const BOOKING = require("./public/assets/js/booking-config.js");
 const Pricing = require("./public/assets/js/pricing.js");
 
@@ -113,6 +114,7 @@ app.post("/api/orders", wrap(async (req, res) => {
   try { order = T.createOrder({ event, items: b.items, name, email, phone, currency: CURRENCY }); }
   catch (e) { if (e instanceof T.OrderError) return res.status(400).json({ error: e.message }); throw e; }
 
+  audience.upsertContact({ email, name, phone, source: "ticket", consent: !!b.optin });
   const base = baseUrl(req);
   const orderUrl = `${base}/order/${order.id}?k=${order.access_key}`;
   if (order.total_cents === 0 || DEMO) {
@@ -204,6 +206,7 @@ app.post("/api/bookings", (req, res) => {
   const data = { ...v, estimate: quote };
   q.run(`INSERT OR IGNORE INTO bookings (ref, name, email, phone, event_type, event_date, estimate_cents, data) VALUES (?,?,?,?,?,?,?,?)`,
     ref, clean(v.name), clean(v.email), clean(v.phone), BOOKING.eventTypes[v.type].label, clean(v.date, 20), Math.round(quote.total * 100), JSON.stringify(data));
+  audience.upsertContact({ email: v.email, name: v.name, phone: v.phone, city: clean(v.location, 60), source: "booking", consent: !!v.optin });
   mail.notifyOwner(`🎧 New booking request ${ref}: ${BOOKING.eventTypes[v.type].label} on ${clean(v.date, 20)}`, clean(v.summary, 8000) || JSON.stringify(data, null, 2));
   res.json({ ok: true, ref });
 });
@@ -212,16 +215,26 @@ app.post("/api/messages", (req, res) => {
   const b = req.body || {};
   if (b._gotcha) return res.json({ ok: true });
   if (!clean(b.name) || !isEmail(clean(b.email)) || !clean(b.message)) return res.status(400).json({ error: "Please fill in your name, email and message" });
+  audience.upsertContact({ email: b.email, name: b.name, source: "contact" });
   q.run(`INSERT INTO messages (name, email, subject, message) VALUES (?,?,?,?)`, clean(b.name), clean(b.email), clean(b.subject), clean(b.message, 5000));
   mail.notifyOwner(`✉️ Website message: ${clean(b.subject) || "(no subject)"}`, `${clean(b.name)} <${clean(b.email)}>\n\n${clean(b.message, 5000)}`);
   res.json({ ok: true });
 });
 
 app.post("/api/subscribe", (req, res) => {
-  const email = clean((req.body || {}).email, 200).toLowerCase();
-  if (!isEmail(email)) return res.status(400).json({ error: "Please enter a valid email" });
-  q.run(`INSERT OR IGNORE INTO subscribers (email) VALUES (?)`, email);
+  const b = req.body || {};
+  if (b._gotcha) return res.json({ ok: true });
+  if (!isEmail(clean(b.email))) return res.status(400).json({ error: "Please enter a valid email" });
+  audience.upsertContact({ email: b.email, name: b.name, phone: b.phone, city: b.city, source: "signup", consent: true });
   res.json({ ok: true });
+});
+app.post("/api/unsubscribe", (req, res) => {
+  const b = req.body || {};
+  audience.unsubscribe(b.e, String(b.t || "")) ? res.json({ ok: true }) : res.status(400).json({ error: "This unsubscribe link isn't valid." });
+});
+// One-click unsubscribe from email clients (List-Unsubscribe-Post)
+app.post("/unsubscribe", express.urlencoded({ extended: false }), (req, res) => {
+  audience.unsubscribe(req.query.e, String(req.query.t || "")) ? res.send("Unsubscribed") : res.status(400).send("Invalid link");
 });
 
 // ---------- admin ----------
@@ -269,7 +282,8 @@ app.get("/api/admin/summary", (req, res) => {
       capacity: q.get(`SELECT COALESCE(SUM(quantity),0) n FROM ticket_types WHERE event_id=? AND active=1`, e.id).n })),
     newBookings: q.get(`SELECT COUNT(*) n FROM bookings WHERE status='new'`).n,
     messages: q.get(`SELECT COUNT(*) n FROM messages`).n,
-    subscribers: q.get(`SELECT COUNT(*) n FROM subscribers`).n,
+    subscribers: q.get(`SELECT COUNT(*) n FROM contacts WHERE consent_at IS NOT NULL AND unsubscribed_at IS NULL`).n,
+    contacts: q.get(`SELECT COUNT(*) n FROM contacts`).n,
   });
 });
 
@@ -419,10 +433,50 @@ app.put("/api/admin/bookings/:id", (req, res) => {
   res.json({ ok: true });
 });
 app.get("/api/admin/messages", (req, res) => res.json(q.all(`SELECT * FROM messages ORDER BY created_at DESC LIMIT 500`)));
-app.get("/api/admin/subscribers.csv", (req, res) => {
-  res.type("text/csv").set("Content-Disposition", 'attachment; filename="subscribers.csv"')
-    .send("email,joined\n" + q.all(`SELECT * FROM subscribers ORDER BY created_at`).map((s) => `${s.email},${s.created_at}`).join("\n"));
+const contactRows = () => q.all(`SELECT c.*,
+    (SELECT COUNT(*) FROM tickets t JOIN orders o ON o.id=t.order_id WHERE lower(o.buyer_email)=c.email AND t.status='valid') AS tickets
+  FROM contacts c ORDER BY c.created_at DESC`);
+app.get("/api/admin/contacts", (req, res) => res.json(contactRows()));
+app.get("/api/admin/contacts.csv", (req, res) => {
+  const cols = ["email", "name", "phone", "city", "source", "tickets", "subscribed", "consent_at", "unsubscribed_at", "created_at"];
+  const cell = (v) => { let s = String(v ?? ""); if (/^[=+\-@]/.test(s)) s = "'" + s; return `"${s.replace(/"/g, '""')}"`; };
+  const rows = contactRows().map((c) => ({ ...c, subscribed: c.consent_at && !c.unsubscribed_at ? "yes" : "no" }));
+  res.type("text/csv").set("Content-Disposition", 'attachment; filename="wild-nation-contacts.csv"')
+    .send([cols.join(","), ...rows.map((r) => cols.map((k) => cell(r[k])).join(","))].join("\n"));
 });
+app.delete("/api/admin/contacts/:email", (req, res) => { q.run(`DELETE FROM contacts WHERE email=?`, req.params.email.toLowerCase()); res.json({ ok: true }); });
+
+function campaignContent(b, base) {
+  const event = b.eventId ? q.get(`SELECT * FROM events WHERE id=?`, b.eventId) : null;
+  return { subject: clean(b.subject, 160), body: clean(b.body, 20000), event, when: event ? formatWhen(event) : "",
+    eventUrl: event ? `${base}/event/${event.slug}` : "", base };
+}
+function parseAudience(a) {
+  a = a || {};
+  return ["all", "city", "event"].includes(a.type) ? { type: a.type, value: clean(a.value, 60) } : { type: "all" };
+}
+app.post("/api/admin/campaigns/count", (req, res) => res.json({ count: audience.recipients(parseAudience((req.body || {}).audience)).length }));
+app.post("/api/admin/campaigns/preview", (req, res) => {
+  const c = campaignContent(req.body || {}, baseUrl(req));
+  res.json({ html: audience.buildMessage(c, { email: "preview@example.com", name: "Alex" }, c.base).html });
+});
+app.post("/api/admin/campaigns", wrap(async (req, res) => {
+  const b = req.body || {}, base = baseUrl(req), c = campaignContent(b, base);
+  if (!c.subject || !c.body) return res.status(400).json({ error: "Add a subject and a message" });
+  if (!mail.enabled()) return res.status(400).json({ error: "Email isn't set up yet. Add your SMTP settings on the server, then send." });
+  if (b.testTo) {
+    if (!isEmail(clean(b.testTo))) return res.status(400).json({ error: "Enter an email for the test" });
+    const ok = await mail.send(audience.buildMessage({ ...c, subject: "[TEST] " + c.subject }, { email: clean(b.testTo), name: "" }, base));
+    return ok ? res.json({ ok: true, test: true }) : res.status(502).json({ error: "The test email failed to send. Check your SMTP settings." });
+  }
+  const aud = parseAudience(b.audience), list = audience.recipients(aud);
+  if (!list.length) return res.status(400).json({ error: "Nobody matches that audience yet" });
+  const id = Number(q.run(`INSERT INTO campaigns (subject, body, event_id, audience, total) VALUES (?,?,?,?,?)`,
+    c.subject, c.body, c.event ? c.event.id : null, JSON.stringify(aud), list.length).lastInsertRowid);
+  audience.runCampaign(id, list, c, base).catch((e) => { console.error(e); q.run(`UPDATE campaigns SET status='failed' WHERE id=?`, id); });
+  res.json({ ok: true, id, total: list.length });
+}));
+app.get("/api/admin/campaigns", (req, res) => res.json(q.all(`SELECT c.*, e.title AS event_title FROM campaigns c LEFT JOIN events e ON e.id=c.event_id ORDER BY c.id DESC LIMIT 100`)));
 
 // ---------- pages ----------
 app.use("/uploads", express.static(UPLOADS, { maxAge: "30d" }));

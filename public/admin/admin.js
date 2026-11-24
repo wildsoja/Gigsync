@@ -13,6 +13,7 @@
         <a href="/" title="View site" style="padding:0"><img src="/img/logo.webp" alt="Wild Nation"></a>
         <a href="#dashboard" class="${active === "dashboard" ? "on" : ""}">Events</a>
         <a href="#bookings" class="${active === "bookings" ? "on" : ""}">DJ bookings${badges.bookings ? `<span class="badge">${badges.bookings}</span>` : ""}</a>
+        <a href="#audience" class="${active === "audience" ? "on" : ""}">Audience</a>
         <a href="#blog" class="${active === "blog" ? "on" : ""}">Blog</a>
         <a href="#messages" class="${active === "messages" ? "on" : ""}">Messages</a>
         <a href="/admin/scan">Door scanner</a>
@@ -50,7 +51,7 @@
         <div class="stat-card"><small>Tickets issued</small><b>${upcomingSold}</b></div>
         <div class="stat-card"><small>Revenue</small><b>${money(revenue)}</b></div>
         <div class="stat-card"><small>New DJ requests</small><b>${s.newBookings}</b></div>
-        <div class="stat-card"><small>Mailing list</small><b>${s.subscribers}</b>${s.subscribers ? '<a class="link" href="/api/admin/subscribers.csv" style="font-size:13px">Export CSV</a>' : ""}</div>
+        <a class="stat-card" href="#audience" style="text-decoration:none"><small>Mailing list</small><b>${s.subscribers}</b><span class="lime" style="font-size:13px">${s.contacts} contacts saved →</span></a>
       </div>
       ${s.events.length ? s.events.map((e) => {
         const pct = e.capacity ? Math.min(100, Math.round((e.stats.sold / e.capacity) * 100)) : 0;
@@ -289,6 +290,97 @@
     });
   }
 
+  // ---------- Audience ----------
+  async function audiencePage() {
+    const [contacts, campaigns] = await Promise.all([api("/api/admin/contacts"), api("/api/admin/campaigns")]);
+    const subscribed = contacts.filter((c) => c.consent_at && !c.unsubscribed_at);
+    const srcLabel = { signup: "Sign-up form", ticket: "Ticket buyer", booking: "DJ booking", contact: "Contact form", import: "Import" };
+    shell("audience", `
+      <div class="top"><h1 class="t">Audience</h1><div style="display:flex;gap:10px;flex-wrap:wrap">
+        <a class="btn ghost sm" href="/api/admin/contacts.csv">Export CSV</a><a class="btn" href="#send">✉ Send an update</a></div></div>
+      <div class="stats">
+        <div class="stat-card"><small>Subscribed</small><b class="lime">${subscribed.length}</b></div>
+        <div class="stat-card"><small>All contacts</small><b>${contacts.length}</b></div>
+        <div class="stat-card"><small>With phone</small><b>${contacts.filter((c) => c.phone).length}</b></div>
+        <div class="stat-card"><small>Unsubscribed</small><b>${contacts.filter((c) => c.unsubscribed_at).length}</b></div>
+      </div>
+      ${campaigns.length ? `<h2 class="t" style="font-size:28px;margin:10px 0 12px">Sent updates</h2>
+        <div class="tbl" style="margin-bottom:28px"><table><thead><tr><th>Subject</th><th>Audience</th><th>Sent</th><th>Date</th></tr></thead><tbody>
+        ${campaigns.map((c) => { const a = JSON.parse(c.audience); return `<tr><td><b>${esc(c.subject)}</b>${c.event_title ? `<br><span class="muted">${esc(c.event_title)}</span>` : ""}</td>
+          <td>${a.type === "event" ? "Ticket holders" : a.type === "city" ? esc(a.value) : "Everyone subscribed"}</td>
+          <td>${c.sent}/${c.total}${c.failed ? ` <span class="pill void">${c.failed} failed</span>` : ""} ${c.status === "sending" ? '<span class="pill new">sending…</span>' : ""}</td>
+          <td class="muted">${fmtDate(c.created_at)}</td></tr>`; }).join("")}</tbody></table></div>` : ""}
+      <div class="top" style="margin-bottom:12px"><h2 class="t" style="font-size:28px">Contacts</h2>
+        <div style="display:flex;gap:10px;flex-wrap:wrap"><select id="flt" class="inline" style="padding:10px 14px"><option value="">Everyone</option><option value="sub">Subscribed only</option><option value="ticket">Ticket buyers</option><option value="signup">Sign-ups</option><option value="booking">DJ booking clients</option></select>
+          <input id="q" placeholder="Search name, email, phone, city" style="max-width:300px"></div></div>
+      <div class="tbl"><table><thead><tr><th>Contact</th><th>Phone</th><th>City</th><th>From</th><th>Tickets</th><th>Updates</th><th>Added</th></tr></thead><tbody id="tb"></tbody></table></div>
+      ${contacts.length ? "" : '<p class="muted" style="text-align:center;margin-top:20px">No contacts yet. Sign-ups, ticket buyers and booking clients will appear here.</p>'}`);
+    const draw = () => {
+      const t = document.getElementById("q").value.toLowerCase(), f = document.getElementById("flt").value;
+      document.getElementById("tb").innerHTML = contacts.filter((c) => (!f || (f === "sub" ? c.consent_at && !c.unsubscribed_at : c.source === f)) &&
+        [c.name, c.email, c.phone, c.city].some((v) => String(v || "").toLowerCase().includes(t))).map((c) => `<tr>
+        <td><b>${esc(c.name || "—")}</b><br><a class="lime" href="mailto:${esc(c.email)}">${esc(c.email)}</a></td>
+        <td>${c.phone ? `<a href="tel:${esc(c.phone)}">${esc(c.phone)}</a>` : '<span class="muted">—</span>'}</td>
+        <td>${esc(c.city || "")}</td><td class="muted">${esc(srcLabel[c.source] || c.source)}</td><td>${c.tickets || ""}</td>
+        <td>${c.unsubscribed_at ? '<span class="pill void">unsubscribed</span>' : c.consent_at ? '<span class="pill ok">subscribed</span>' : '<span class="pill">not opted in</span>'}</td>
+        <td class="muted">${fmtDate(c.created_at)}</td></tr>`).join("");
+    };
+    document.getElementById("q").oninput = draw; document.getElementById("flt").onchange = draw; draw();
+  }
+
+  async function sendPage() {
+    const [sum, cities] = [await api("/api/admin/summary"), ["Hamilton", "Toronto", "Niagara"]];
+    const events = sum.events;
+    const upcoming = events.filter((e) => e.status === "published");
+    shell("audience", `
+      <div class="top"><div><a href="#audience" class="eyebrow" style="text-decoration:none">← Audience</a><h1 class="t" style="margin-top:8px">Send an update</h1></div></div>
+      ${me.email ? "" : '<div class="banner" style="margin-bottom:20px">Email isn\'t set up yet, so you can write and preview, but sending needs SMTP settings on the server (see README).</div>'}
+      <div class="ed-grid" style="grid-template-columns:minmax(0,1fr) minmax(0,1fr)">
+        <form id="cf" novalidate>
+          <div class="field"><label>Send to</label><select name="aud" id="aud">
+            <option value="all|">Everyone subscribed</option>
+            ${cities.map((c) => `<option value="city|${c}">Subscribers near ${c}</option>`).join("")}
+            ${events.map((e) => `<option value="event|${e.id}">Ticket holders: ${esc(e.title)} (event update)</option>`).join("")}</select>
+            <span class="hint" id="cnt"></span></div>
+          <div class="field"><label>Subject <span class="req">*</span></label><input name="subject" required placeholder="e.g. Tickets are live for Entanglement 2027"></div>
+          <div class="field"><label>Message <span class="req">*</span></label><textarea name="body" style="min-height:220px" placeholder="Write your update. Blank line = new paragraph. **bold**, [link](https://…), ## Heading"></textarea>
+            <span class="hint">Each email starts with “Hey [first name],” automatically when we know their name.</span></div>
+          <div class="field"><label>Feature an event</label><select name="eventId"><option value="">None</option>${upcoming.map((e) => `<option value="${e.id}">${esc(e.title)} · ${esc(e.when)}</option>`).join("")}</select>
+            <span class="hint">Adds the flyer and a “Get tickets” button.</span></div>
+          <div class="card" style="padding:16px;margin:18px 0">
+            <div class="row2" style="align-items:end"><div class="field" style="margin:0"><label>Send a test to</label><input name="testTo" type="email" placeholder="your email"></div>
+            <button type="button" class="btn ghost" id="test">Send test</button></div></div>
+          <button class="btn lg block" id="send">Send update</button>
+          <div class="form-msg" id="cm"></div>
+        </form>
+        <div><label style="display:block;margin-bottom:8px">Preview</label>
+          <iframe id="pv" title="Email preview" style="width:100%;height:760px;border:1px solid var(--line-2);border-radius:16px;background:#08060d"></iframe></div>
+      </div>`);
+    const f = document.getElementById("cf"), msg = document.getElementById("cm");
+    const audObj = () => { const [type, value] = f.aud.value.split("|"); return { type, value }; };
+    const payload = () => ({ subject: f.subject.value, body: f.body.value, eventId: f.eventId.value || null, audience: audObj() });
+    const count = async () => { const r = await api("/api/admin/campaigns/count", { method: "POST", body: { audience: audObj() } }); document.getElementById("cnt").textContent = `${r.count} ${r.count === 1 ? "person" : "people"} will get this`; return r.count; };
+    let t; const preview = () => { clearTimeout(t); t = setTimeout(async () => {
+      const r = await api("/api/admin/campaigns/preview", { method: "POST", body: { ...payload(), subject: f.subject.value || "Your subject here", body: f.body.value || "Your message here." } });
+      document.getElementById("pv").srcdoc = r.html; }, 250); };
+    f.addEventListener("input", preview); f.aud.onchange = count; f.eventId.onchange = preview;
+    count(); preview();
+    document.getElementById("test").onclick = async () => {
+      msg.className = "form-msg"; msg.textContent = "Sending test…";
+      try { await api("/api/admin/campaigns", { method: "POST", body: { ...payload(), testTo: f.testTo.value } }); msg.className = "form-msg ok"; msg.textContent = "Test sent to " + f.testTo.value; }
+      catch (err) { msg.className = "form-msg err"; msg.textContent = err.message; }
+    };
+    f.onsubmit = async (e) => {
+      e.preventDefault();
+      const n = await count();
+      if (!f.subject.value.trim() || !f.body.value.trim()) { msg.className = "form-msg err"; msg.textContent = "Add a subject and a message"; return; }
+      if (!confirm(`Send "${f.subject.value}" to ${n} ${n === 1 ? "person" : "people"}?`)) return;
+      const btn = document.getElementById("send"); btn.disabled = true;
+      try { const r = await api("/api/admin/campaigns", { method: "POST", body: payload() }); WN.toast(`Sending to ${r.total}…`); location.hash = "audience"; }
+      catch (err) { msg.className = "form-msg err"; msg.textContent = err.message; btn.disabled = false; }
+    };
+  }
+
   // ---------- Blog ----------
   async function blogList() {
     const posts = await api("/api/admin/posts");
@@ -386,6 +478,8 @@
       else if (r === "bookings") await bookings();
       else if (r === "messages") await messages();
       else if (r === "blog") await blogList();
+      else if (r === "audience") await audiencePage();
+      else if (r === "send") await sendPage();
       else if (r.startsWith("post/")) await postEditor(r.split("/")[1]);
       else await dashboard();
     } catch (e) { if (/signed in/i.test(e.message)) return login(); app.innerHTML = `<div class="wrap"><div class="empty-state" style="margin-top:60px">${esc(e.message)}</div></div>`; }

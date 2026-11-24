@@ -39,6 +39,7 @@
                 <div class="field"><label for="email2">Confirm email <span class="req">*</span></label><input id="email2" name="email2" type="email" autocomplete="email" required></div>
               </div>
               <p class="hint" style="margin:0">Your tickets are sent to this email.</p>
+              <label class="optin"><input type="checkbox" name="optin" value="1"> Send me updates about future Wild Nation events</label>
             </div>
             <div class="tix-foot">
               <div class="tix-total"><span class="muted" id="count">Select tickets</span><b id="total">$0</b></div>
@@ -142,7 +143,7 @@
     if (f.email.value.trim().toLowerCase() !== f.email2.value.trim().toLowerCase()) { err.textContent = "Emails don't match"; return f.email2.focus(); }
     const btn = $("buy"), label = btn.textContent; btn.disabled = true; btn.textContent = "Processing…";
     try {
-      const r = await WN.api("/api/orders", { method: "POST", body: { event: slug, items: qty, name: f.name.value, email: f.email.value, phone: f.phone.value } });
+      const r = await WN.api("/api/orders", { method: "POST", body: { event: slug, items: qty, name: f.name.value, email: f.email.value, phone: f.phone.value, optin: f.optin.checked } });
       location.href = r.redirect;
     } catch (ex) { err.textContent = ex.message; btn.disabled = false; btn.textContent = label; }
   });

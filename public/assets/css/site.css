@@ -457,3 +457,13 @@ input[type=range]{padding:0;border:0;background:transparent;accent-color:var(--l
 .post-nav b{display:block;font-family:var(--display);font-weight:400;text-transform:uppercase;font-size:24px;line-height:1;margin-top:6px}
 .post-nav .next{text-align:right;grid-column:2}
 @media (max-width:600px){.post-nav{grid-template-columns:1fr}.post-nav .next{grid-column:1}}
+
+/* Sign-up form */
+.signup-grid{display:grid;gap:12px;grid-template-columns:1.1fr 1.4fr 1fr 1fr}
+.signup-grid .field{margin:0}
+.signup-foot{display:flex;gap:18px;align-items:center;margin-top:16px;flex-wrap:wrap}
+.signup-foot .hint{margin:0;flex:1;min-width:220px}
+@media (max-width:900px){.signup-grid{grid-template-columns:1fr 1fr}}
+@media (max-width:520px){.signup-grid{grid-template-columns:1fr}.signup-foot .btn{width:100%}}
+.optin{display:flex;gap:10px;align-items:flex-start;font-size:14px;color:#d6cfe6;cursor:pointer;margin-top:14px;font-weight:500}
+.optin input{width:18px;height:18px;margin:1px 0 0;accent-color:var(--lime);flex:none}

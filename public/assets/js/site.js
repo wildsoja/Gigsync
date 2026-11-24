@@ -90,12 +90,31 @@ window.WN = (function () {
     let t = document.querySelector(".toast"); if (!t) { t = document.createElement("div"); t.className = "toast"; document.body.append(t); }
     t.textContent = msg; t.classList.add("show"); clearTimeout(t._h); t._h = setTimeout(() => t.classList.remove("show"), 2600);
   }
-  // Newsletter forms
-  document.querySelectorAll("form[data-subscribe]").forEach((f) => f.addEventListener("submit", async (e) => {
-    e.preventDefault(); const msg = f.querySelector(".form-msg");
-    try { await api("/api/subscribe", { method: "POST", body: { email: f.email.value } }); f.reset(); msg.className = "form-msg ok"; msg.textContent = "You're on the list. Welcome to the Nation!"; }
-    catch (err) { msg.className = "form-msg err"; msg.textContent = err.message; }
-  }));
+  // Mailing-list sign-up: <div data-signup></div> becomes the full form.
+  document.querySelectorAll("[data-signup]").forEach((box, n) => {
+    const id = (k) => `su${n}-${k}`;
+    box.innerHTML = `<form class="signup" novalidate>
+      <div class="signup-grid">
+        <div class="field"><label for="${id("name")}">Name</label><input id="${id("name")}" name="name" autocomplete="name" placeholder="Your name"></div>
+        <div class="field"><label for="${id("email")}">Email <span class="req">*</span></label><input id="${id("email")}" name="email" type="email" autocomplete="email" required placeholder="you@email.com"></div>
+        <div class="field"><label for="${id("phone")}">Phone</label><input id="${id("phone")}" name="phone" type="tel" autocomplete="tel" placeholder="Optional"></div>
+        <div class="field"><label for="${id("city")}">Closest city</label><select id="${id("city")}" name="city"><option value="">Choose</option><option>Hamilton</option><option>Toronto</option><option>Niagara</option><option>Other</option></select></div>
+      </div>
+      <input type="text" name="_gotcha" style="display:none" tabindex="-1" autocomplete="off">
+      <div class="signup-foot"><button class="btn lg">Notify me</button>
+        <p class="hint">By signing up you agree to get event updates from Wild Nation by email. Unsubscribe any time.</p></div>
+      <div class="form-msg"></div></form>`;
+    const f = box.querySelector("form");
+    f.addEventListener("submit", async (e) => {
+      e.preventDefault(); const msg = f.querySelector(".form-msg"), btn = f.querySelector("button");
+      btn.disabled = true;
+      try {
+        await api("/api/subscribe", { method: "POST", body: Object.fromEntries(new FormData(f)) });
+        f.querySelector(".signup-grid").innerHTML = ""; f.querySelector(".signup-foot").remove();
+        msg.className = "form-msg ok"; msg.style.fontSize = "18px"; msg.textContent = "You're on the list. Welcome to the Nation! 🎉";
+      } catch (err) { msg.className = "form-msg err"; msg.textContent = err.message; btn.disabled = false; }
+    });
+  });
   // Equalizers
   document.querySelectorAll(".eq[data-bars]").forEach((eq) => { for (let i = 0; i < +eq.dataset.bars; i++) { const b = document.createElement("i"); b.style.animationDelay = (-Math.random()).toFixed(2) + "s"; b.style.animationDuration = (0.45 + Math.random() * 0.8).toFixed(2) + "s"; eq.append(b); } });
 

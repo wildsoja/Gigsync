@@ -113,3 +113,22 @@ test("blog: drafts are hidden, posts need admin to create", async () => {
   assert.equal(got.body, "hello world");
   assert.equal(got.older.slug, list[0].slug);
 });
+
+test("mailing list: opt-in, details saved, unsubscribe", async () => {
+  const audience = require("../lib/audience");
+  assert.equal((await post("/api/subscribe", { name: "Tobi", email: "Tobi@X.co", phone: "905", city: "Hamilton" })).status, 200);
+  await post("/api/orders", { event: "t", items: { [gaId]: 1 }, name: "No Opt", email: "noopt@x.co", phone: "416" }).catch(() => {});
+  const tobi = q.get(`SELECT * FROM contacts WHERE email='tobi@x.co'`);
+  assert.equal(tobi.phone, "905"); assert.ok(tobi.consent_at);
+  const all = audience.recipients({ type: "all" }).map((r) => r.email);
+  assert.ok(all.includes("tobi@x.co"));
+  assert.ok(!all.includes("noopt@x.co"), "buyers who didn't tick the box aren't on the marketing list");
+  assert.deepEqual(audience.recipients({ type: "city", value: "hamilton" }).map((r) => r.email), ["tobi@x.co"]);
+  const url = new URL(audience.unsubUrl("http://x", "tobi@x.co"));
+  assert.equal((await post("/api/unsubscribe", { e: "tobi@x.co", t: "forged" })).status, 400);
+  assert.equal((await post("/api/unsubscribe", { e: url.searchParams.get("e"), t: url.searchParams.get("t") })).status, 200);
+  assert.ok(!audience.recipients({ type: "all" }).some((r) => r.email === "tobi@x.co"));
+  // signing up again re-subscribes
+  await post("/api/subscribe", { email: "tobi@x.co" });
+  assert.ok(audience.recipients({ type: "all" }).some((r) => r.email === "tobi@x.co"));
+});

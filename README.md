@@ -14,7 +14,7 @@ Website, DJ booking quotes and a built-in ticketing system for **Wild Nation Eve
 | `/wildsoja` | DJ page with services and prices |
 | `/book` | DJ booking form with a live price estimate (**send this link to clients**) |
 | `/contact` | Contact form |
-| `/admin` | Your dashboard: events, ticket sales, attendees, comp tickets, DJ bookings, blog posts, messages |
+| `/admin` | Your dashboard: events, ticket sales, attendees, comp tickets, DJ bookings, audience & email updates, blog posts, messages |
 | `/admin/scan` | Door scanner. Open on a phone, point the camera at tickets |
 
 ## How ticketing works
@@ -26,6 +26,15 @@ Website, DJ booking quotes and a built-in ticketing system for **Wild Nation Eve
 5. Watch sales and check-ins live in `/admin`. Export attendees to CSV, resend tickets, cancel orders, or send free **comp tickets** for guest list and performers.
 
 **Test mode:** until you add a Stripe key, checkout issues real tickets without taking payment, and the site shows a "test mode" banner. Use this to try everything end to end.
+
+## Mailing list & updates
+
+- **Who gets saved:** everyone who uses the "Notify me" form (name, email, phone, closest city), every ticket buyer, DJ booking clients and contact-form senders. See them all in `/admin` → **Audience**, filter and search, and export to CSV.
+- **Who gets updates:** only people who opted in, via the sign-up form or the "send me updates" box at checkout and on the booking form. The box starts unticked, as Canada's anti-spam law (CASL) requires.
+- **Sending:** `/admin` → Audience → **Send an update**. Write a subject and message, optionally feature an event (flyer + Get tickets button), preview it, send yourself a test, then send to everyone subscribed, to subscribers near Hamilton, Toronto or Niagara, or to **ticket holders of one event** (for things like time or venue changes).
+- Every email has an unsubscribe link. Unsubscribed people are never emailed again unless they sign up again.
+- CASL also asks for a mailing address in marketing emails: set `BUSINESS_ADDRESS` and it's added to the footer.
+- **Volume:** Gmail allows about 500 emails a day. For a bigger list, use an email provider such as Brevo, Resend or Amazon SES (just change the SMTP settings).
 
 ## Run it locally
 
