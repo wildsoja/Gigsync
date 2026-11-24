@@ -29,9 +29,14 @@ Website, DJ booking quotes and a built-in ticketing system for **Wild Nation Eve
 
 ## Mailing list & updates
 
-- **Who gets saved:** everyone who uses the "Notify me" form (name, email, phone, closest city), every ticket buyer, DJ booking clients and contact-form senders. See them all in `/admin` → **Audience**, filter and search, and export to CSV.
-- **Who gets updates:** only people who opted in, via the sign-up form or the "send me updates" box at checkout and on the booking form. The box starts unticked, as Canada's anti-spam law (CASL) requires.
-- **Sending:** `/admin` → Audience → **Send an update**. Write a subject and message, optionally feature an event (flyer + Get tickets button), preview it, send yourself a test, then send to everyone subscribed, to subscribers near Hamilton, Toronto or Niagara, or to **ticket holders of one event** (for things like time or venue changes).
+- **Who gets saved:** every ticket buyer (name, email, phone), everyone who uses the "Notify me" form (plus closest city), DJ booking clients, comp guests and contact-form senders. See them in `/admin` → **Audience**: tickets bought, **events attended** (from door scans), last seen, and list status. Filter, search, export to CSV.
+- **Who's on the mailing list:**
+  - **Ticket buyers, automatically.** Canada's anti-spam law (CASL) allows emailing customers for 2 years after their last purchase ("implied consent"), and each new purchase restarts the 2 years. Checkout shows one small line, "We'll also send you updates… ☐ No thanks", and only people who tick it are left off.
+  - **DJ booking clients** for 6 months after their inquiry (same "No thanks" option on the form).
+  - **People who sign up** with the "Notify me" form, with no time limit.
+  - Comp guests and contact-form senders are saved but not added to the list.
+- **Sending:** `/admin` → Audience → **Send an update**. Write a subject and message, optionally feature an event (flyer + Get tickets button), preview it, send yourself a test, then send to everyone on the list, to sign-ups near Hamilton, Toronto or Niagara, or to **ticket holders of one event** (for things like time or venue changes).
+- **Blog alerts:** when you publish a post, tick "Email my mailing list" (on by default for new posts). Video posts go out as "New video: …" with the YouTube thumbnail and a Watch now button, mixes as "New mix: …". Each post is only ever emailed once.
 - Every email has an unsubscribe link. Unsubscribed people are never emailed again unless they sign up again.
 - CASL also asks for a mailing address in marketing emails: set `BUSINESS_ADDRESS` and it's added to the footer.
 - **Volume:** Gmail allows about 500 emails a day. For a bigger list, use an email provider such as Brevo, Resend or Amazon SES (just change the SMTP settings).

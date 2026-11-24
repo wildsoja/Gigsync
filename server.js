@@ -114,7 +114,7 @@ app.post("/api/orders", wrap(async (req, res) => {
   try { order = T.createOrder({ event, items: b.items, name, email, phone, currency: CURRENCY }); }
   catch (e) { if (e instanceof T.OrderError) return res.status(400).json({ error: e.message }); throw e; }
 
-  audience.upsertContact({ email, name, phone, source: "ticket", consent: !!b.optin });
+  audience.upsertContact({ email, name, phone, source: "ticket", impliedMonths: 24, optOut: !!b.noUpdates });
   const base = baseUrl(req);
   const orderUrl = `${base}/order/${order.id}?k=${order.access_key}`;
   if (order.total_cents === 0 || DEMO) {
@@ -181,7 +181,12 @@ function excerptOf(p) {
   const text = p.body.replace(/!\[[^\]]*\]\([^)]*\)/g, "").replace(/\[([^\]]*)\]\([^)]*\)/g, "$1").replace(/[#*_>]/g, "").replace(/https?:\/\/\S+/g, "").replace(/\s+/g, " ").trim();
   return text.length > 180 ? text.slice(0, 177).replace(/\s\S*$/, "") + "…" : text;
 }
-const publicPost = (p, full) => ({ slug: p.slug, title: p.title, excerpt: excerptOf(p), cover: p.cover, tag: p.tag, published_at: p.published_at,
+// First YouTube video in a post: used for the thumbnail when there's no cover image.
+const ytId = (body) => { const m = String(body || "").match(/(?:youtube\.com\/(?:watch\?v=|shorts\/)|youtu\.be\/)([\w-]{11})/); return m && m[1]; };
+const MEDIA_RE = /^https?:\/\/(?:www\.)?(?:youtube\.com\/(?:watch|shorts)|youtu\.be\/|soundcloud\.com\/|(?:www\.)?mixcloud\.com\/|open\.spotify\.com\/)/m;
+const postCover = (p) => p.cover || (ytId(p.body) ? `https://i.ytimg.com/vi/${ytId(p.body)}/hqdefault.jpg` : "");
+const publicPost = (p, full) => ({ slug: p.slug, title: p.title, excerpt: excerptOf(p), cover: postCover(p), tag: p.tag, published_at: p.published_at,
+  media: MEDIA_RE.test(p.body) ? (ytId(p.body) ? "video" : "audio") : "",
   minutes: Math.max(1, Math.round(p.body.split(/\s+/).length / 220)), ...(full ? { body: p.body } : {}) });
 
 app.get("/api/posts", (req, res) => {
@@ -206,7 +211,7 @@ app.post("/api/bookings", (req, res) => {
   const data = { ...v, estimate: quote };
   q.run(`INSERT OR IGNORE INTO bookings (ref, name, email, phone, event_type, event_date, estimate_cents, data) VALUES (?,?,?,?,?,?,?,?)`,
     ref, clean(v.name), clean(v.email), clean(v.phone), BOOKING.eventTypes[v.type].label, clean(v.date, 20), Math.round(quote.total * 100), JSON.stringify(data));
-  audience.upsertContact({ email: v.email, name: v.name, phone: v.phone, city: clean(v.location, 60), source: "booking", consent: !!v.optin });
+  audience.upsertContact({ email: v.email, name: v.name, phone: v.phone, source: "booking", impliedMonths: 6, optOut: !!v.noUpdates });
   mail.notifyOwner(`🎧 New booking request ${ref}: ${BOOKING.eventTypes[v.type].label} on ${clean(v.date, 20)}`, clean(v.summary, 8000) || JSON.stringify(data, null, 2));
   res.json({ ok: true, ref });
 });
@@ -282,7 +287,7 @@ app.get("/api/admin/summary", (req, res) => {
       capacity: q.get(`SELECT COALESCE(SUM(quantity),0) n FROM ticket_types WHERE event_id=? AND active=1`, e.id).n })),
     newBookings: q.get(`SELECT COUNT(*) n FROM bookings WHERE status='new'`).n,
     messages: q.get(`SELECT COUNT(*) n FROM messages`).n,
-    subscribers: q.get(`SELECT COUNT(*) n FROM contacts WHERE consent_at IS NOT NULL AND unsubscribed_at IS NULL`).n,
+    subscribers: q.get(`SELECT COUNT(*) n FROM contacts WHERE ${audience.ON_LIST}`).n,
     contacts: q.get(`SELECT COUNT(*) n FROM contacts`).n,
   });
 });
@@ -375,6 +380,7 @@ app.post("/api/admin/comp", wrap(async (req, res) => {
   const qty = Math.min(50, Math.max(1, parseInt(b.qty) || 1));
   if (!tier) return res.status(400).json({ error: "Pick an event and ticket type" });
   if (!clean(b.name) || !isEmail(clean(b.email))) return res.status(400).json({ error: "Guest name and email are required" });
+  audience.upsertContact({ email: b.email, name: b.name, source: "comp" }); // saved, but a free ticket isn't consent to marketing
   const id = "WN" + T.randomCode(8);
   q.run(`INSERT INTO orders (id, event_id, buyer_name, buyer_email, total_cents, currency, access_key, status) VALUES (?,?,?,?,0,?,?, 'pending')`,
     id, event.id, clean(b.name), clean(b.email).toLowerCase(), CURRENCY, T.randomKey());
@@ -418,8 +424,29 @@ function savePost(req, res) {
   if (q.get(`SELECT 1 FROM posts WHERE slug=? AND id IS NOT ?`, slug, id)) slug = `${slug}-${f.published_at.slice(0, 4)}`;
   if (q.get(`SELECT 1 FROM posts WHERE slug=? AND id IS NOT ?`, slug, id)) slug = `${slug}-${T.randomCode(4).toLowerCase()}`;
   const vals = [slug, f.title, f.excerpt, f.body, f.cover, f.tag, f.published_at, f.status];
-  if (id) { q.run(`UPDATE posts SET slug=?, title=?, excerpt=?, body=?, cover=?, tag=?, published_at=?, status=? WHERE id=?`, ...vals, id); return res.json({ id, slug }); }
-  res.json({ id: Number(q.run(`INSERT INTO posts (slug, title, excerpt, body, cover, tag, published_at, status) VALUES (?,?,?,?,?,?,?,?)`, ...vals).lastInsertRowid), slug });
+  let postId = id;
+  if (id) q.run(`UPDATE posts SET slug=?, title=?, excerpt=?, body=?, cover=?, tag=?, published_at=?, status=? WHERE id=?`, ...vals, id);
+  else postId = Number(q.run(`INSERT INTO posts (slug, title, excerpt, body, cover, tag, published_at, status) VALUES (?,?,?,?,?,?,?,?)`, ...vals).lastInsertRowid);
+  const out = { id: postId, slug };
+  if (b.notify && f.status === "published") out.notify = notifyPost(postId, baseUrl(req));
+  res.json(out);
+}
+
+/** Email the mailing list about a newly published post (once per post). */
+function notifyPost(id, base) {
+  const p = q.get(`SELECT * FROM posts WHERE id=?`, id);
+  if (!p || p.notified_at) return { skipped: "already sent" };
+  if (!mail.enabled()) return { error: "Post saved, but email isn't set up yet, so the mailing list wasn't notified." };
+  const list = audience.recipients({ type: "all" });
+  if (!list.length) return { error: "Post saved. Nobody is on the mailing list yet." };
+  const pp = publicPost(p);
+  const label = pp.media === "video" ? "Watch now" : pp.media === "audio" ? "Listen now" : "Read more";
+  const kind = pp.media === "video" ? "New video" : pp.media === "audio" ? "New mix" : "New on the blog";
+  const c = { subject: `${kind}: ${p.title}`, body: pp.excerpt, base, post: { title: p.title, image: pp.cover, url: `${base}/blog/${p.slug}`, label } };
+  const cid = Number(q.run(`INSERT INTO campaigns (subject, body, audience, total) VALUES (?,?,?,?)`, c.subject, c.body, JSON.stringify({ type: "post", value: p.slug }), list.length).lastInsertRowid);
+  q.run(`UPDATE posts SET notified_at=datetime('now') WHERE id=?`, id);
+  audience.runCampaign(cid, list, c, base).catch((e) => { console.error(e); q.run(`UPDATE campaigns SET status='failed' WHERE id=?`, cid); });
+  return { sent: list.length };
 }
 app.post("/api/admin/posts", savePost);
 app.put("/api/admin/posts/:id", savePost);
@@ -434,13 +461,16 @@ app.put("/api/admin/bookings/:id", (req, res) => {
 });
 app.get("/api/admin/messages", (req, res) => res.json(q.all(`SELECT * FROM messages ORDER BY created_at DESC LIMIT 500`)));
 const contactRows = () => q.all(`SELECT c.*,
-    (SELECT COUNT(*) FROM tickets t JOIN orders o ON o.id=t.order_id WHERE lower(o.buyer_email)=c.email AND t.status='valid') AS tickets
-  FROM contacts c ORDER BY c.created_at DESC`);
+    (SELECT COUNT(*) FROM tickets t JOIN orders o ON o.id=t.order_id WHERE lower(o.buyer_email)=c.email AND t.status='valid') AS tickets,
+    (SELECT COUNT(DISTINCT t.event_id) FROM tickets t JOIN orders o ON o.id=t.order_id WHERE lower(o.buyer_email)=c.email AND t.checked_in_at IS NOT NULL) AS attended,
+    (SELECT MAX(o.created_at) FROM orders o WHERE lower(o.buyer_email)=c.email AND o.status IN ('paid','comp')) AS last_purchase,
+    CASE WHEN ${audience.ON_LIST} THEN 1 ELSE 0 END AS on_list
+  FROM contacts c ORDER BY c.updated_at DESC`);
 app.get("/api/admin/contacts", (req, res) => res.json(contactRows()));
 app.get("/api/admin/contacts.csv", (req, res) => {
-  const cols = ["email", "name", "phone", "city", "source", "tickets", "subscribed", "consent_at", "unsubscribed_at", "created_at"];
+  const cols = ["email", "name", "phone", "city", "source", "tickets", "attended", "last_purchase", "on_mailing_list", "signed_up_at", "customer_until", "unsubscribed_at", "created_at"];
   const cell = (v) => { let s = String(v ?? ""); if (/^[=+\-@]/.test(s)) s = "'" + s; return `"${s.replace(/"/g, '""')}"`; };
-  const rows = contactRows().map((c) => ({ ...c, subscribed: c.consent_at && !c.unsubscribed_at ? "yes" : "no" }));
+  const rows = contactRows().map((c) => ({ ...c, on_mailing_list: c.on_list ? "yes" : "no", signed_up_at: c.consent_at, customer_until: c.implied_until }));
   res.type("text/csv").set("Content-Disposition", 'attachment; filename="wild-nation-contacts.csv"')
     .send([cols.join(","), ...rows.map((r) => cols.map((k) => cell(r[k])).join(","))].join("\n"));
 });

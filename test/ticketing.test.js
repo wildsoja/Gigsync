@@ -117,12 +117,17 @@ test("blog: drafts are hidden, posts need admin to create", async () => {
 test("mailing list: opt-in, details saved, unsubscribe", async () => {
   const audience = require("../lib/audience");
   assert.equal((await post("/api/subscribe", { name: "Tobi", email: "Tobi@X.co", phone: "905", city: "Hamilton" })).status, 200);
-  await post("/api/orders", { event: "t", items: { [gaId]: 1 }, name: "No Opt", email: "noopt@x.co", phone: "416" }).catch(() => {});
+  await post("/api/orders", { event: "t", items: { [gaId]: 1 }, name: "Buyer", email: "buyer@x.co", phone: "416" });
+  await post("/api/orders", { event: "t", items: { [gaId]: 1 }, name: "No Thanks", email: "noopt@x.co", phone: "416", noUpdates: true });
   const tobi = q.get(`SELECT * FROM contacts WHERE email='tobi@x.co'`);
   assert.equal(tobi.phone, "905"); assert.ok(tobi.consent_at);
   const all = audience.recipients({ type: "all" }).map((r) => r.email);
   assert.ok(all.includes("tobi@x.co"));
-  assert.ok(!all.includes("noopt@x.co"), "buyers who didn't tick the box aren't on the marketing list");
+  assert.ok(all.includes("buyer@x.co"), "buyers are on the list by default (CASL implied consent)");
+  assert.ok(!all.includes("noopt@x.co"), "buyers who ticked 'No thanks' are not");
+  const until = q.get(`SELECT implied_until FROM contacts WHERE email='buyer@x.co'`).implied_until;
+  assert.equal(until.slice(0, 4), String(new Date().getFullYear() + 2), "implied consent lasts 2 years from purchase");
+  assert.equal(q.get(`SELECT phone FROM contacts WHERE email='noopt@x.co'`).phone, "416", "details are saved even when they opt out");
   assert.deepEqual(audience.recipients({ type: "city", value: "hamilton" }).map((r) => r.email), ["tobi@x.co"]);
   const url = new URL(audience.unsubUrl("http://x", "tobi@x.co"));
   assert.equal((await post("/api/unsubscribe", { e: "tobi@x.co", t: "forged" })).status, 400);
@@ -131,4 +136,16 @@ test("mailing list: opt-in, details saved, unsubscribe", async () => {
   // signing up again re-subscribes
   await post("/api/subscribe", { email: "tobi@x.co" });
   assert.ok(audience.recipients({ type: "all" }).some((r) => r.email === "tobi@x.co"));
+});
+
+test("blog: publishing with 'notify' emails the list once, video posts get a thumbnail", async () => {
+  const cookie = (await post("/api/admin/login", { password: "pw" })).headers.get("set-cookie").split(";")[0];
+  const body = "New mix video!\n\nhttps://www.youtube.com/watch?v=dQw4w9WgXcQ";
+  const r = await (await post("/api/admin/posts", { title: "Vid", body, status: "published", notify: true }, { cookie })).json();
+  assert.match(r.notify.error, /email isn't set up/i); // no SMTP in tests: post still saved
+  const got = await (await fetch(base + "/api/posts/" + r.slug)).json();
+  assert.equal(got.media, "video");
+  assert.equal(got.cover, "https://i.ytimg.com/vi/dQw4w9WgXcQ/hqdefault.jpg");
+  const seeded = q.get(`SELECT notified_at FROM posts WHERE slug='euphoria-2022'`);
+  assert.ok(seeded.notified_at, "old recaps are marked as already announced");
 });

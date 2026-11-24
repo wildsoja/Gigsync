@@ -293,37 +293,43 @@
   // ---------- Audience ----------
   async function audiencePage() {
     const [contacts, campaigns] = await Promise.all([api("/api/admin/contacts"), api("/api/admin/campaigns")]);
-    const subscribed = contacts.filter((c) => c.consent_at && !c.unsubscribed_at);
-    const srcLabel = { signup: "Sign-up form", ticket: "Ticket buyer", booking: "DJ booking", contact: "Contact form", import: "Import" };
+    const onList = contacts.filter((c) => c.on_list);
+    const srcLabel = { signup: "Sign-up form", ticket: "Ticket buyer", booking: "DJ booking", contact: "Contact form", comp: "Comp guest", import: "Import" };
+    const monthYear = (d) => new Date(d + "T12:00:00").toLocaleDateString("en-CA", { month: "short", year: "numeric" }).replace(".", "");
+    const status = (c) => c.unsubscribed_at ? '<span class="pill void">opted out</span>'
+      : c.consent_at ? '<span class="pill ok">signed up</span>'
+      : c.on_list ? `<span class="pill quoted" title="Customer: can be emailed until this date. Each new purchase extends it.">customer · to ${monthYear(c.implied_until)}</span>`
+      : c.implied_until ? '<span class="pill">expired</span>' : '<span class="pill">not on list</span>';
     shell("audience", `
       <div class="top"><h1 class="t">Audience</h1><div style="display:flex;gap:10px;flex-wrap:wrap">
         <a class="btn ghost sm" href="/api/admin/contacts.csv">Export CSV</a><a class="btn" href="#send">✉ Send an update</a></div></div>
       <div class="stats">
-        <div class="stat-card"><small>Subscribed</small><b class="lime">${subscribed.length}</b></div>
+        <div class="stat-card"><small>On mailing list</small><b class="lime">${onList.length}</b></div>
         <div class="stat-card"><small>All contacts</small><b>${contacts.length}</b></div>
+        <div class="stat-card"><small>Attended an event</small><b>${contacts.filter((c) => c.attended).length}</b></div>
         <div class="stat-card"><small>With phone</small><b>${contacts.filter((c) => c.phone).length}</b></div>
-        <div class="stat-card"><small>Unsubscribed</small><b>${contacts.filter((c) => c.unsubscribed_at).length}</b></div>
       </div>
       ${campaigns.length ? `<h2 class="t" style="font-size:28px;margin:10px 0 12px">Sent updates</h2>
         <div class="tbl" style="margin-bottom:28px"><table><thead><tr><th>Subject</th><th>Audience</th><th>Sent</th><th>Date</th></tr></thead><tbody>
         ${campaigns.map((c) => { const a = JSON.parse(c.audience); return `<tr><td><b>${esc(c.subject)}</b>${c.event_title ? `<br><span class="muted">${esc(c.event_title)}</span>` : ""}</td>
-          <td>${a.type === "event" ? "Ticket holders" : a.type === "city" ? esc(a.value) : "Everyone subscribed"}</td>
+          <td>${a.type === "event" ? "Ticket holders" : a.type === "post" ? "Blog post alert" : a.type === "city" ? esc(a.value) : "Mailing list"}</td>
           <td>${c.sent}/${c.total}${c.failed ? ` <span class="pill void">${c.failed} failed</span>` : ""} ${c.status === "sending" ? '<span class="pill new">sending…</span>' : ""}</td>
           <td class="muted">${fmtDate(c.created_at)}</td></tr>`; }).join("")}</tbody></table></div>` : ""}
       <div class="top" style="margin-bottom:12px"><h2 class="t" style="font-size:28px">Contacts</h2>
-        <div style="display:flex;gap:10px;flex-wrap:wrap"><select id="flt" class="inline" style="padding:10px 14px"><option value="">Everyone</option><option value="sub">Subscribed only</option><option value="ticket">Ticket buyers</option><option value="signup">Sign-ups</option><option value="booking">DJ booking clients</option></select>
+        <div style="display:flex;gap:10px;flex-wrap:wrap"><select id="flt" class="inline" style="padding:10px 14px"><option value="">Everyone</option><option value="list">On mailing list</option><option value="attended">Attended an event</option><option value="buyers">Bought tickets</option><option value="signup">Signed up on site</option><option value="booking">DJ booking clients</option><option value="unsub">Unsubscribed</option></select>
           <input id="q" placeholder="Search name, email, phone, city" style="max-width:300px"></div></div>
-      <div class="tbl"><table><thead><tr><th>Contact</th><th>Phone</th><th>City</th><th>From</th><th>Tickets</th><th>Updates</th><th>Added</th></tr></thead><tbody id="tb"></tbody></table></div>
+      <div class="tbl"><table><thead><tr><th>Contact</th><th>Phone</th><th>City</th><th>From</th><th>Tickets</th><th>Events attended</th><th>Updates</th><th>Last seen</th></tr></thead><tbody id="tb"></tbody></table></div>
       ${contacts.length ? "" : '<p class="muted" style="text-align:center;margin-top:20px">No contacts yet. Sign-ups, ticket buyers and booking clients will appear here.</p>'}`);
     const draw = () => {
       const t = document.getElementById("q").value.toLowerCase(), f = document.getElementById("flt").value;
-      document.getElementById("tb").innerHTML = contacts.filter((c) => (!f || (f === "sub" ? c.consent_at && !c.unsubscribed_at : c.source === f)) &&
+      const match = { list: (c) => c.on_list, attended: (c) => c.attended > 0, buyers: (c) => c.tickets > 0, unsub: (c) => c.unsubscribed_at, signup: (c) => c.consent_at, booking: (c) => c.source === "booking" };
+      document.getElementById("tb").innerHTML = contacts.filter((c) => (!f || match[f](c)) &&
         [c.name, c.email, c.phone, c.city].some((v) => String(v || "").toLowerCase().includes(t))).map((c) => `<tr>
         <td><b>${esc(c.name || "—")}</b><br><a class="lime" href="mailto:${esc(c.email)}">${esc(c.email)}</a></td>
         <td>${c.phone ? `<a href="tel:${esc(c.phone)}">${esc(c.phone)}</a>` : '<span class="muted">—</span>'}</td>
         <td>${esc(c.city || "")}</td><td class="muted">${esc(srcLabel[c.source] || c.source)}</td><td>${c.tickets || ""}</td>
-        <td>${c.unsubscribed_at ? '<span class="pill void">unsubscribed</span>' : c.consent_at ? '<span class="pill ok">subscribed</span>' : '<span class="pill">not opted in</span>'}</td>
-        <td class="muted">${fmtDate(c.created_at)}</td></tr>`).join("");
+        <td>${c.attended ? `<b class="lime">${c.attended}</b>` : ""}</td><td>${status(c)}</td>
+        <td class="muted">${fmtDate(c.updated_at)}</td></tr>`).join("");
     };
     document.getElementById("q").oninput = draw; document.getElementById("flt").onchange = draw; draw();
   }
@@ -338,8 +344,8 @@
       <div class="ed-grid" style="grid-template-columns:minmax(0,1fr) minmax(0,1fr)">
         <form id="cf" novalidate>
           <div class="field"><label>Send to</label><select name="aud" id="aud">
-            <option value="all|">Everyone subscribed</option>
-            ${cities.map((c) => `<option value="city|${c}">Subscribers near ${c}</option>`).join("")}
+            <option value="all|">Everyone on the mailing list</option>
+            ${cities.map((c) => `<option value="city|${c}">Mailing list near ${c} (from sign-ups)</option>`).join("")}
             ${events.map((e) => `<option value="event|${e.id}">Ticket holders: ${esc(e.title)} (event update)</option>`).join("")}</select>
             <span class="hint" id="cnt"></span></div>
           <div class="field"><label>Subject <span class="req">*</span></label><input name="subject" required placeholder="e.g. Tickets are live for Entanglement 2027"></div>
@@ -407,10 +413,10 @@
           <div class="field" style="margin-top:16px"><label>Status</label><select name="status"><option value="draft">Draft (hidden)</option><option value="published">Published</option></select></div>
           <div class="field"><label>Date</label><input type="date" name="published_at" value="${esc(p.published_at || "")}"></div>
           <div class="field"><label>Tag</label><input name="tag" value="${esc(p.tag || "")}" placeholder="e.g. Toronto, Recap, News" list="tags"></div>
-          <datalist id="tags"><option>Hamilton</option><option>Toronto</option><option>Niagara</option><option>Recap</option><option>News</option><option>Mix</option></datalist>
+          <datalist id="tags"><option>Video</option><option>Mix</option><option>Recap</option><option>Lineup</option><option>News</option><option>Hamilton</option><option>Toronto</option><option>Niagara</option></datalist>
           <div class="card" style="padding:16px;font-size:13px;color:var(--muted);margin-top:8px"><b style="color:var(--text)">Formatting</b><br>
             Blank line = new paragraph<br>## Heading<br>**bold** · *italic*<br>[link text](https://…)<br>> Pull quote<br>- bullet list<br>
-            Paste a YouTube link on its own line to embed the video<br>Images: use “Insert image” below</div>
+            Paste a YouTube, SoundCloud, Mixcloud or Spotify link on its own line to embed it<br>Images: use “Insert image” below<br>No cover? Video posts use the YouTube thumbnail</div>
         </div>
         <div>
           <div class="field"><label>Title <span class="req">*</span></label><input name="title" required value="${esc(p.title || "")}" placeholder="e.g. Euphoria 2022: the recap"></div>
@@ -424,7 +430,10 @@
           </div>
           <div class="field"><label>Page URL</label><input name="slug" value="${esc(p.slug || "")}" placeholder="auto from title"><span class="hint">yoursite.com/blog/<b>${esc(p.slug || "…")}</b></span></div>
         </div></div>
-        <div class="sticky-save"><button class="btn">${isNew ? "Create post" : "Save changes"}</button>
+        <div class="sticky-save">
+          ${p.notified_at ? `<span class="muted" style="font-size:14px">✉ Mailing list emailed ${fmtDate(p.notified_at)}</span>`
+            : `<label class="optin" style="margin:0 8px 0 0"><input type="checkbox" name="notify" value="1" ${isNew || p.status !== "published" ? "checked" : ""}> Email my mailing list when this is published</label>`}
+          <button class="btn">${isNew ? "Create post" : "Save changes"}</button>
           ${isNew ? "" : '<button type="button" class="btn ghost sm" id="del" style="margin-left:auto">Delete post</button>'}
           <span class="form-msg" id="pm" style="margin:0"></span></div></form>`);
     const f = document.getElementById("pf"), msg = document.getElementById("pm"), body = document.getElementById("body");
@@ -454,8 +463,12 @@
     f.onsubmit = async (e) => {
       e.preventDefault();
       try {
-        const r = await api(isNew ? "/api/admin/posts" : "/api/admin/posts/" + p.id, { method: isNew ? "POST" : "PUT", body: Object.fromEntries(new FormData(f)) });
-        WN.toast("Saved"); if (isNew) location.hash = "post/" + r.id; else postEditor(p.id);
+        const data = Object.fromEntries(new FormData(f));
+        if (data.notify && data.status === "published" && !confirm("Publish and email your mailing list about this post?")) return;
+        const r = await api(isNew ? "/api/admin/posts" : "/api/admin/posts/" + p.id, { method: isNew ? "POST" : "PUT", body: data });
+        if (r.notify && r.notify.error) alert(r.notify.error);
+        WN.toast(r.notify && r.notify.sent ? `Published · emailing ${r.notify.sent} people` : "Saved");
+        if (isNew) location.hash = "post/" + r.id; else postEditor(p.id);
       } catch (err) { msg.className = "form-msg err"; msg.textContent = err.message; }
     };
   }

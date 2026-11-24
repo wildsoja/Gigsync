@@ -467,3 +467,10 @@ input[type=range]{padding:0;border:0;background:transparent;accent-color:var(--l
 @media (max-width:520px){.signup-grid{grid-template-columns:1fr}.signup-foot .btn{width:100%}}
 .optin{display:flex;gap:10px;align-items:flex-start;font-size:14px;color:#d6cfe6;cursor:pointer;margin-top:14px;font-weight:500}
 .optin input{width:18px;height:18px;margin:1px 0 0;accent-color:var(--lime);flex:none}
+
+.optout{display:inline-flex;gap:5px;align-items:center;font-size:12px;font-weight:500;color:var(--muted);cursor:pointer;margin-left:6px;white-space:nowrap}
+.optout input{width:13px;height:13px;margin:0;accent-color:var(--muted)}
+.prose .audio{margin:1.6em 0;border-radius:14px;overflow:hidden}
+.prose .audio iframe{width:100%;border:0;display:block}
+.post-row .thumb{position:relative}
+.post-row .play{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);z-index:1;width:46px;height:46px;border-radius:50%;background:rgba(214,251,81,.92);color:#000;display:grid;place-items:center;font-size:16px;box-shadow:0 6px 20px rgba(0,0,0,.4)}
