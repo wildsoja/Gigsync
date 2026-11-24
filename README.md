@@ -9,10 +9,12 @@ Website, DJ booking quotes and a built-in ticketing system for **Wild Nation Eve
 | `/event/<name>` | Event page with ticket types and checkout |
 | `/order/<id>` | Order confirmation with every ticket's QR code |
 | `/t/<ticket>` | A single ticket (what the QR code opens). Share it with a friend |
+| `/blog` | Blog in a list layout: latest post featured, then dated rows with filters by city |
+| `/blog/<post>` | A single post |
 | `/wildsoja` | DJ page with services and prices |
 | `/book` | DJ booking form with a live price estimate (**send this link to clients**) |
 | `/contact` | Contact form |
-| `/admin` | Your dashboard: events, ticket sales, attendees, comp tickets, DJ bookings, messages |
+| `/admin` | Your dashboard: events, ticket sales, attendees, comp tickets, DJ bookings, blog posts, messages |
 | `/admin/scan` | Door scanner. Open on a phone, point the camera at tickets |
 
 ## How ticketing works
@@ -52,6 +54,6 @@ Back up `DATA_DIR` (`wildnation.db`, `secret.key`, `uploads/`). If `secret.key` 
 ## Change things
 
 - **DJ prices, add-ons, travel fees, deposit:** `public/assets/js/booking-config.js`
-- **Past event recaps:** `public/assets/js/recaps.js` (images in `public/img/recaps/`)
+- **Blog posts & past-event recaps:** write and edit them in `/admin` → Blog. The 9 original recaps are loaded as posts on first run. Posts support headings, **bold**, links, images, pull quotes and YouTube embeds (paste the link on its own line).
 - **Contact info / socials:** top of `public/assets/js/site.js`
 - **Colours & fonts:** top of `public/assets/css/site.css`

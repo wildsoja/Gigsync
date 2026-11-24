@@ -173,6 +173,27 @@ app.get("/api/qr/:token.svg", wrap(async (req, res) => {
   res.type("image/svg+xml").set("Cache-Control", "private, max-age=86400").send(svg);
 }));
 
+// ---------- blog ----------
+function excerptOf(p) {
+  if (p.excerpt) return p.excerpt;
+  const text = p.body.replace(/!\[[^\]]*\]\([^)]*\)/g, "").replace(/\[([^\]]*)\]\([^)]*\)/g, "$1").replace(/[#*_>]/g, "").replace(/https?:\/\/\S+/g, "").replace(/\s+/g, " ").trim();
+  return text.length > 180 ? text.slice(0, 177).replace(/\s\S*$/, "") + "…" : text;
+}
+const publicPost = (p, full) => ({ slug: p.slug, title: p.title, excerpt: excerptOf(p), cover: p.cover, tag: p.tag, published_at: p.published_at,
+  minutes: Math.max(1, Math.round(p.body.split(/\s+/).length / 220)), ...(full ? { body: p.body } : {}) });
+
+app.get("/api/posts", (req, res) => {
+  const limit = Math.min(100, parseInt(req.query.limit) || 100);
+  res.json(q.all(`SELECT * FROM posts WHERE status='published' ORDER BY published_at DESC, id ASC LIMIT ?`, limit).map((p) => publicPost(p)));
+});
+app.get("/api/posts/:slug", (req, res) => {
+  const p = q.get(`SELECT * FROM posts WHERE slug=? AND status='published'`, req.params.slug);
+  if (!p) return res.status(404).json({ error: "Post not found" });
+  const all = q.all(`SELECT * FROM posts WHERE status='published' ORDER BY published_at DESC, id ASC`);
+  const i = all.findIndex((x) => x.id === p.id);
+  res.json({ ...publicPost(p, true), newer: all[i - 1] ? publicPost(all[i - 1]) : null, older: all[i + 1] ? publicPost(all[i + 1]) : null });
+});
+
 app.post("/api/bookings", (req, res) => {
   const v = req.body || {};
   if (v._gotcha) return res.json({ ok: true });
@@ -368,6 +389,28 @@ app.post("/api/admin/orders/:id/resend", wrap(async (req, res) => {
 }));
 app.post("/api/admin/orders/:id/cancel", (req, res) => { T.cancelOrder(req.params.id); res.json({ ok: true }); });
 
+app.get("/api/admin/posts", (req, res) => res.json(q.all(`SELECT * FROM posts ORDER BY published_at DESC, id ASC`)));
+app.get("/api/admin/posts/:id", (req, res) => {
+  const p = q.get(`SELECT * FROM posts WHERE id=?`, req.params.id);
+  p ? res.json(p) : res.status(404).json({ error: "Not found" });
+});
+function savePost(req, res) {
+  const b = req.body || {}, id = req.params.id ? Number(req.params.id) : null;
+  const f = { title: clean(b.title, 160), excerpt: clean(b.excerpt, 400), body: clean(b.body, 50000), cover: clean(b.cover, 300), tag: clean(b.tag, 60),
+    published_at: clean(b.published_at, 10), status: b.status === "published" ? "published" : "draft" };
+  if (!f.title) return res.status(400).json({ error: "Title is required" });
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(f.published_at)) f.published_at = T.nowLocal().slice(0, 10);
+  let slug = slugify(b.slug || f.title);
+  if (q.get(`SELECT 1 FROM posts WHERE slug=? AND id IS NOT ?`, slug, id)) slug = `${slug}-${f.published_at.slice(0, 4)}`;
+  if (q.get(`SELECT 1 FROM posts WHERE slug=? AND id IS NOT ?`, slug, id)) slug = `${slug}-${T.randomCode(4).toLowerCase()}`;
+  const vals = [slug, f.title, f.excerpt, f.body, f.cover, f.tag, f.published_at, f.status];
+  if (id) { q.run(`UPDATE posts SET slug=?, title=?, excerpt=?, body=?, cover=?, tag=?, published_at=?, status=? WHERE id=?`, ...vals, id); return res.json({ id, slug }); }
+  res.json({ id: Number(q.run(`INSERT INTO posts (slug, title, excerpt, body, cover, tag, published_at, status) VALUES (?,?,?,?,?,?,?,?)`, ...vals).lastInsertRowid), slug });
+}
+app.post("/api/admin/posts", savePost);
+app.put("/api/admin/posts/:id", savePost);
+app.delete("/api/admin/posts/:id", (req, res) => { q.run(`DELETE FROM posts WHERE id=?`, req.params.id); res.json({ ok: true }); });
+
 app.get("/api/admin/bookings", (req, res) => res.json(q.all(`SELECT * FROM bookings ORDER BY created_at DESC LIMIT 500`).map((b) => ({ ...b, data: JSON.parse(b.data) }))));
 app.put("/api/admin/bookings/:id", (req, res) => {
   const s = (req.body || {}).status;
@@ -384,6 +427,7 @@ app.get("/api/admin/subscribers.csv", (req, res) => {
 // ---------- pages ----------
 app.use("/uploads", express.static(UPLOADS, { maxAge: "30d" }));
 app.get("/event/:slug", (req, res) => res.sendFile(path.join(PUBLIC, "event.html")));
+app.get("/blog/:slug", (req, res) => res.sendFile(path.join(PUBLIC, "post.html")));
 app.get("/order/:id", (req, res) => res.sendFile(path.join(PUBLIC, "order.html")));
 app.get("/t/:token", (req, res) => res.sendFile(path.join(PUBLIC, "ticket.html")));
 app.get("/tickets", (req, res) => res.redirect(301, "/events"));
@@ -393,6 +437,7 @@ app.use((err, req, res, next) => { console.error(err); res.status(500).json({ er
 
 if (require.main === module) {
   require("./lib/seed").seedIfEmpty();
+  require("./lib/seed").seedPosts();
   app.listen(PORT, () => {
     console.log(`Wild Nation running on http://localhost:${PORT}`);
     if (DEMO) console.log("  TEST MODE: no STRIPE_SECRET_KEY set, checkout issues tickets without taking payment.");

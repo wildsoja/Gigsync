@@ -13,6 +13,7 @@
         <a href="/" title="View site" style="padding:0"><img src="/img/logo.webp" alt="Wild Nation"></a>
         <a href="#dashboard" class="${active === "dashboard" ? "on" : ""}">Events</a>
         <a href="#bookings" class="${active === "bookings" ? "on" : ""}">DJ bookings${badges.bookings ? `<span class="badge">${badges.bookings}</span>` : ""}</a>
+        <a href="#blog" class="${active === "blog" ? "on" : ""}">Blog</a>
         <a href="#messages" class="${active === "messages" ? "on" : ""}">Messages</a>
         <a href="/admin/scan">Door scanner</a>
         <span class="sp"></span>
@@ -288,6 +289,85 @@
     });
   }
 
+  // ---------- Blog ----------
+  async function blogList() {
+    const posts = await api("/api/admin/posts");
+    shell("blog", `
+      <div class="top"><h1 class="t">Blog</h1><div style="display:flex;gap:10px"><a class="btn ghost sm" href="/blog" target="_blank">View blog ↗</a><a class="btn" href="#post/new">+ New post</a></div></div>
+      ${posts.length ? posts.map((p) => `<a class="ev-row" href="#post/${p.id}">
+        <div class="th" style="height:64px;${p.cover ? `background-image:url('${esc(p.cover)}')` : ""}"></div>
+        <div><h3>${esc(p.title)} <span class="pill ${p.status}">${p.status}</span></h3>
+          <div class="m">${esc(p.published_at)}${p.tag ? " · " + esc(p.tag) : ""}</div></div>
+        <span class="lime">→</span></a>`).join("") : '<div class="empty-state"><h3>No posts yet</h3><p>Write your first recap or announcement.</p></div>'}`);
+  }
+
+  async function postEditor(id) {
+    const isNew = id === "new";
+    const p = isNew ? { status: "draft", published_at: new Date().toISOString().slice(0, 10), body: "" } : await api("/api/admin/posts/" + id);
+    shell("blog", `
+      <div class="top"><div><a href="#blog" class="eyebrow" style="text-decoration:none">← Blog</a><h1 class="t" style="margin-top:8px">${isNew ? "New post" : esc(p.title)}</h1></div>
+        ${!isNew && p.status === "published" ? `<a class="btn ghost sm" href="/blog/${esc(p.slug)}" target="_blank">View post ↗</a>` : ""}</div>
+      <form id="pf" novalidate><div class="ed-grid">
+        <div>
+          <label class="flyer-drop ${p.cover ? "has" : ""}" id="drop" style="aspect-ratio:4/3;${p.cover ? `background-image:url('${esc(p.cover)}')` : ""}">
+            <span>${p.cover ? "Change cover" : "Upload cover image"}</span><input type="file" accept="image/*" id="file" hidden></label>
+          <input type="hidden" name="cover" value="${esc(p.cover || "")}">
+          <div class="field" style="margin-top:16px"><label>Status</label><select name="status"><option value="draft">Draft (hidden)</option><option value="published">Published</option></select></div>
+          <div class="field"><label>Date</label><input type="date" name="published_at" value="${esc(p.published_at || "")}"></div>
+          <div class="field"><label>Tag</label><input name="tag" value="${esc(p.tag || "")}" placeholder="e.g. Toronto, Recap, News" list="tags"></div>
+          <datalist id="tags"><option>Hamilton</option><option>Toronto</option><option>Niagara</option><option>Recap</option><option>News</option><option>Mix</option></datalist>
+          <div class="card" style="padding:16px;font-size:13px;color:var(--muted);margin-top:8px"><b style="color:var(--text)">Formatting</b><br>
+            Blank line = new paragraph<br>## Heading<br>**bold** · *italic*<br>[link text](https://…)<br>> Pull quote<br>- bullet list<br>
+            Paste a YouTube link on its own line to embed the video<br>Images: use “Insert image” below</div>
+        </div>
+        <div>
+          <div class="field"><label>Title <span class="req">*</span></label><input name="title" required value="${esc(p.title || "")}" placeholder="e.g. Euphoria 2022: the recap"></div>
+          <div class="field"><label>Short summary</label><input name="excerpt" value="${esc(p.excerpt || "")}" placeholder="Optional. Shown in the blog list (otherwise the first lines are used)"></div>
+          <div class="field">
+            <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap"><label for="body">Post</label>
+              <span style="display:flex;gap:8px"><button type="button" class="btn ghost sm" id="insImg">Insert image</button><button type="button" class="btn ghost sm" id="prev">Preview</button></span></div>
+            <textarea id="body" name="body" style="min-height:380px;font-size:16px;line-height:1.6">${esc(p.body || "")}</textarea>
+            <div class="prose card" id="preview" hidden style="font-size:17px;max-width:none"></div>
+            <input type="file" accept="image/*" id="imgFile" hidden>
+          </div>
+          <div class="field"><label>Page URL</label><input name="slug" value="${esc(p.slug || "")}" placeholder="auto from title"><span class="hint">yoursite.com/blog/<b>${esc(p.slug || "…")}</b></span></div>
+        </div></div>
+        <div class="sticky-save"><button class="btn">${isNew ? "Create post" : "Save changes"}</button>
+          ${isNew ? "" : '<button type="button" class="btn ghost sm" id="del" style="margin-left:auto">Delete post</button>'}
+          <span class="form-msg" id="pm" style="margin:0"></span></div></form>`);
+    const f = document.getElementById("pf"), msg = document.getElementById("pm"), body = document.getElementById("body");
+    f.status.value = p.status || "draft";
+    const upload = async (file) => { const r = await api("/api/admin/upload", { method: "POST", body: { dataUrl: await shrink(file, 1800) } }); return r.url; };
+    document.getElementById("file").onchange = async (e) => {
+      if (!e.target.files[0]) return; msg.className = "form-msg"; msg.textContent = "Uploading…";
+      try { const url = await upload(e.target.files[0]); f.cover.value = url; const d = document.getElementById("drop"); d.style.backgroundImage = `url('${url}')`; d.classList.add("has"); d.querySelector("span").textContent = "Change cover"; msg.textContent = "Cover uploaded. Save to keep it."; }
+      catch (err) { msg.className = "form-msg err"; msg.textContent = err.message; }
+    };
+    document.getElementById("insImg").onclick = () => document.getElementById("imgFile").click();
+    document.getElementById("imgFile").onchange = async (e) => {
+      if (!e.target.files[0]) return; msg.className = "form-msg"; msg.textContent = "Uploading image…";
+      try {
+        const url = await upload(e.target.files[0]), at = body.selectionStart ?? body.value.length;
+        body.value = body.value.slice(0, at) + `\n\n![](${url})\n\n` + body.value.slice(at); msg.textContent = "Image added.";
+      } catch (err) { msg.className = "form-msg err"; msg.textContent = err.message; }
+      e.target.value = "";
+    };
+    document.getElementById("prev").onclick = (e) => {
+      const pv = document.getElementById("preview"), showing = !pv.hidden;
+      pv.hidden = showing; body.hidden = !showing; e.target.textContent = showing ? "Preview" : "Edit";
+      if (!showing) pv.innerHTML = WNBlog.render(body.value) || '<p class="muted">Nothing to preview yet.</p>';
+    };
+    const del = document.getElementById("del");
+    if (del) del.onclick = async () => { if (!confirm("Delete this post permanently?")) return; await api("/api/admin/posts/" + p.id, { method: "DELETE" }); location.hash = "blog"; };
+    f.onsubmit = async (e) => {
+      e.preventDefault();
+      try {
+        const r = await api(isNew ? "/api/admin/posts" : "/api/admin/posts/" + p.id, { method: isNew ? "POST" : "PUT", body: Object.fromEntries(new FormData(f)) });
+        WN.toast("Saved"); if (isNew) location.hash = "post/" + r.id; else postEditor(p.id);
+      } catch (err) { msg.className = "form-msg err"; msg.textContent = err.message; }
+    };
+  }
+
   async function messages() {
     const list = await api("/api/admin/messages");
     shell("messages", `<div class="top"><h1 class="t">Messages</h1></div>
@@ -305,6 +385,8 @@
       if (r.startsWith("event/")) await eventPage(r.split("/")[1]);
       else if (r === "bookings") await bookings();
       else if (r === "messages") await messages();
+      else if (r === "blog") await blogList();
+      else if (r.startsWith("post/")) await postEditor(r.split("/")[1]);
       else await dashboard();
     } catch (e) { if (/signed in/i.test(e.message)) return login(); app.innerHTML = `<div class="wrap"><div class="empty-state" style="margin-top:60px">${esc(e.message)}</div></div>`; }
     scrollTo(0, 0);

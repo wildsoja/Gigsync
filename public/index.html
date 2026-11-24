@@ -87,7 +87,7 @@
   <div class="wrap">
     <div class="section-head reveal">
       <div><span class="eyebrow">Missed them?</span><h2 class="display h-lg">The archive</h2></div>
-      <div class="rail-btns"><button class="icon-btn" data-rail="-1" aria-label="Previous">←</button><button class="icon-btn" data-rail="1" aria-label="Next">→</button></div>
+      <div class="rail-btns"><a class="btn ghost sm" href="/blog" style="margin-right:6px">Read the blog</a><button class="icon-btn" data-rail="-1" aria-label="Previous">←</button><button class="icon-btn" data-rail="1" aria-label="Next">→</button></div>
     </div>
     <div class="recap-rail" id="rail"></div>
   </div>
@@ -123,7 +123,7 @@
 <script src="/assets/js/recaps.js"></script>
 <script>
 WN.loadEvents(document.getElementById("events"), { limit: 3 });
-WN_renderRecaps(document.getElementById("rail"));
+WN_renderRecaps(document.getElementById("rail"), { limit: 12 });
 document.querySelectorAll("[data-rail]").forEach(b => b.onclick = () => {
   const r = document.getElementById("rail"); r.scrollBy({ left: +b.dataset.rail * r.clientWidth * 0.8, behavior: "smooth" });
 });

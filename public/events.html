@@ -37,7 +37,7 @@
 
 <section class="section" id="recaps" style="padding-top:20px">
   <div class="wrap">
-    <div class="section-head"><div><span class="eyebrow">Missed them?</span><h2 class="display h-lg">Best experiences</h2><p class="lead" style="margin-top:12px">Don't worry, we got you. Tap a flyer for the story.</p></div></div>
+    <div class="section-head"><div><span class="eyebrow">Missed them?</span><h2 class="display h-lg">Best experiences</h2><p class="lead" style="margin-top:12px">Don't worry, we got you. Tap a flyer for the story.</p></div><a class="btn ghost" href="/blog">Read the blog <span class="arrow">→</span></a></div>
     <div class="recap-grid" id="recapGrid"></div>
   </div>
 </section>
@@ -61,7 +61,7 @@
 <script src="/assets/js/recaps.js"></script>
 <script>
 WN.loadEvents(document.getElementById("events"));
-WN_renderRecaps(document.getElementById("recapGrid"));
+WN_renderRecaps(document.getElementById("recapGrid"), { limit: 8 });
 </script>
 </body>
 </html>

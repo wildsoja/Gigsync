@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#08060d">
+<link rel="icon" href="/img/icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Anton&family=JetBrains+Mono:wght@500&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/assets/css/site.css">
+<title>Blog | Wild Nation</title>
+<meta name="description" content="A story from the Wild Nation blog.">
+</head>
+<body data-page="blog">
+<main id="root">
+  <header class="post-hero"><div class="blur" id="blur"></div><div class="wrap">
+    <a href="/blog" class="eyebrow" style="text-decoration:none">← All posts</a>
+    <h1 id="title">&nbsp;</h1><div class="post-meta" id="meta"></div></div></header>
+  <div class="wrap">
+    <figure class="post-cover" id="cover" hidden><img alt=""></figure>
+    <article class="prose" id="body"></article>
+    <nav class="post-nav" id="pnav" aria-label="More posts"></nav>
+  </div>
+</main>
+<section class="section" style="padding-top:70px"><div class="wrap" style="text-align:center">
+  <span class="eyebrow">Don't miss the next one</span>
+  <h2 class="display h-md" style="margin:14px 0 24px">See what's next</h2>
+  <a class="btn lg" href="/events#upcoming">Upcoming events <span class="arrow">→</span></a>
+</div></section>
+<script src="/assets/js/site.js"></script>
+<script src="/assets/js/blog.js"></script>
+<script>
+(async function () {
+  const $ = (id) => document.getElementById(id);
+  const slug = decodeURIComponent(location.pathname.split("/").pop());
+  let p;
+  try { p = await WN.api("/api/posts/" + encodeURIComponent(slug)); }
+  catch (e) {
+    $("root").innerHTML = '<div class="wrap center-page"><div class="empty-state"><h3>Post not found</h3><p><a class="btn" href="/blog" style="margin-top:14px">Back to the blog</a></p></div></div>';
+    return;
+  }
+  document.title = p.title + " | Wild Nation";
+  document.querySelector('meta[name=description]').content = p.excerpt;
+  $("title").textContent = p.title;
+  $("meta").innerHTML = (p.tag ? `<span class="tag">${WN.esc(p.tag)}</span>` : "") + `<span>${WNBlog.fmtDate(p.published_at)}</span><span>· ${p.minutes} min read</span>`;
+  if (p.cover) { $("cover").hidden = false; $("cover").querySelector("img").src = p.cover; $("cover").querySelector("img").alt = p.title; $("blur").style.backgroundImage = `url("${p.cover}")`; }
+  $("body").innerHTML = WNBlog.render(p.body);
+  $("pnav").innerHTML = (p.newer ? `<a href="/blog/${encodeURIComponent(p.newer.slug)}"><small>← Newer</small><b>${WN.esc(p.newer.title)}</b></a>` : "") +
+    (p.older ? `<a class="next" href="/blog/${encodeURIComponent(p.older.slug)}"><small>Older →</small><b>${WN.esc(p.older.title)}</b></a>` : "");
+})();
+</script>
+</body>
+</html>

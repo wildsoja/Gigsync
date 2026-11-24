@@ -95,3 +95,21 @@ test("booking estimate is recomputed on the server", async () => {
   const b = q.get(`SELECT estimate_cents FROM bookings ORDER BY id DESC LIMIT 1`);
   assert.equal(b.estimate_cents, 135000); // 1200 base + 150 MC, Tuesday, no surcharges
 });
+
+test("blog: drafts are hidden, posts need admin to create", async () => {
+  require("../lib/seed").seedPosts();
+  const list = await (await fetch(base + "/api/posts")).json();
+  assert.equal(list.length, 9);
+  assert.ok(list[0].excerpt.length > 0);
+  assert.equal((await post("/api/admin/posts", { title: "x" })).status, 401);
+  const cookie = (await post("/api/admin/login", { password: "pw" })).headers.get("set-cookie").split(";")[0];
+  let r = await post("/api/admin/posts", { title: "Secret draft", body: "hi", status: "draft" }, { cookie });
+  const { slug } = await r.json();
+  assert.equal((await fetch(base + "/api/posts/" + slug)).status, 404);
+  r = await post("/api/admin/posts", { title: "Secret draft", body: "hello world", status: "published", published_at: "2099-01-01" }, { cookie });
+  const pub = await r.json();
+  assert.notEqual(pub.slug, slug); // unique slugs
+  const got = await (await fetch(base + "/api/posts/" + pub.slug)).json();
+  assert.equal(got.body, "hello world");
+  assert.equal(got.older.slug, list[0].slug);
+});
