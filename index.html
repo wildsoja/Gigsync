@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Wild Soja | DJ &amp; Events by Wild Nation</title>
+<meta name="description" content="Book DJ Wild Soja and Wild Nation for weddings, parties, corporate events and clubs. Get an instant price estimate online.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Anton&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/styles.css">
+</head>
+<body>
+<nav class="nav"><div class="wrap">
+  <a class="logo" href="./">Wild<span>Soja</span></a>
+  <div class="nav-links">
+    <a href="#services">Services</a>
+    <a href="#how">How it works</a>
+    <a class="btn sm" href="book.html">Get a quote</a>
+  </div>
+</div></nav>
+
+<header class="hero"><div class="wrap">
+  <span class="eyebrow">Wild Nation Events presents</span>
+  <h1>DJ Wild<br><em>Soja</em></h1>
+  <p class="lead">Weddings, private parties, corporate nights and clubs. Sound, lights and a dance floor that doesn't empty. Tell us about your event and get a price in about two minutes.</p>
+  <div class="ctas">
+    <a class="btn" href="book.html">Book your date &rarr;</a>
+    <a class="btn ghost" href="#services">See packages</a>
+  </div>
+  <div class="eq" aria-hidden="true" id="eq"></div>
+</div></header>
+
+<section id="services"><div class="wrap">
+  <div class="section-head">
+    <span class="eyebrow">Services</span>
+    <h2>Every kind of room</h2>
+    <p>Base prices include <span data-hours>4</span> hours of DJ time. Add sound, lighting, MC and effects when you book.</p>
+  </div>
+  <div class="grid cols-3" id="service-grid"></div>
+</div></section>
+
+<section id="how" class="band"><div class="wrap">
+  <div class="section-head">
+    <span class="eyebrow">How it works</span>
+    <h2>Three steps to booked</h2>
+  </div>
+  <div class="grid cols-3 steps">
+    <div class="card"><div class="num">01</div><h3>Fill out the form</h3><p>Date, venue, guest count and the vibe you're going for. Your price updates as you go.</p></div>
+    <div class="card"><div class="num">02</div><h3>Get your quote</h3><p>We review your request, confirm availability and send you a final quote, usually within 24 hours.</p></div>
+    <div class="card"><div class="num">03</div><h3>Lock the date</h3><p>A <span data-deposit>30</span>% deposit holds your date. Then we plan the music together.</p></div>
+  </div>
+</div></section>
+
+<section class="cta-band"><div class="wrap">
+  <h2>Let's get wild.</h2>
+  <a class="btn" href="book.html">Start your booking &rarr;</a>
+</div></section>
+
+<footer><div class="wrap">
+  <span>&copy; <span id="yr"></span> Wild Nation Events. DJ Wild Soja.</span>
+  <span id="contact"></span>
+</div></footer>
+
+<script src="assets/config.js"></script>
+<script>
+(function(){
+  var C = window.WN_CONFIG, fmt = new Intl.NumberFormat("en-US",{style:"currency",currency:C.currency,maximumFractionDigits:0});
+  var blurbs = {
+    wedding:"Ceremony to last dance. Mic for toasts, entrances and a planned timeline.",
+    corporate:"Launches, galas, holiday parties. Polished, on-brand, on schedule.",
+    private:"House parties, anniversaries, reunions. Your crowd, your playlist.",
+    birthday:"Milestone birthdays and Sweet 16s with lights and hype.",
+    school:"Proms, homecoming and formals. Clean edits, big energy.",
+    club:"Club, bar and lounge residencies or one-off nights.",
+    festival:"Main stage and outdoor sets with full production.",
+    other:"Got something different in mind? Tell us about it."
+  };
+  var g = document.getElementById("service-grid");
+  Object.keys(C.eventTypes).forEach(function(k){
+    var t = C.eventTypes[k], a = document.createElement("a");
+    a.className = "card"; a.href = "book.html?type=" + k; a.style.textDecoration = "none";
+    a.innerHTML = "<h3></h3><p></p><div class='price-from'>From <b></b></div>";
+    a.querySelector("h3").textContent = t.label;
+    a.querySelector("p").textContent = blurbs[k] || "";
+    a.querySelector("b").textContent = fmt.format(t.base);
+    g.appendChild(a);
+  });
+  document.querySelectorAll("[data-hours]").forEach(function(e){e.textContent=C.includedHours});
+  document.querySelectorAll("[data-deposit]").forEach(function(e){e.textContent=C.depositPercent});
+  document.getElementById("yr").textContent = new Date().getFullYear();
+  var c = [];
+  if (C.brand.email && C.brand.email.indexOf("example.com")<0) c.push("<a href='mailto:"+C.brand.email+"'>"+C.brand.email+"</a>");
+  if (C.brand.phone) c.push(C.brand.phone);
+  if (C.brand.instagram) c.push("<a href='https://instagram.com/"+C.brand.instagram+"' target='_blank' rel='noopener'>@"+C.brand.instagram+"</a>");
+  document.getElementById("contact").innerHTML = c.join(" &middot; ");
+  var eq = document.getElementById("eq");
+  for (var i=0;i<40;i++){var b=document.createElement("i");b.style.animationDelay=(Math.random()*-1).toFixed(2)+"s";b.style.animationDuration=(0.5+Math.random()*0.8).toFixed(2)+"s";eq.appendChild(b);}
+})();
+</script>
+</body>
+</html>
