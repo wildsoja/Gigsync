@@ -3,23 +3,21 @@
    Edit this file to change your prices, contact info and how
    booking requests reach you. No other code changes needed.
    ============================================================ */
-window.WN_CONFIG = {
+(typeof window !== "undefined" ? window : globalThis).WN_CONFIG = {
   brand: {
     djName: "Wild Soja",
     company: "Wild Nation",
-    email: "bookings@example.com",      // <-- put your booking email here
-    phone: "",                          // optional, e.g. "(555) 123-4567"
-    instagram: "",                      // optional, e.g. "wildsoja"
-    city: "",                           // optional, e.g. "Houston, TX"
+    email: "wildnationgta@gmail.com",
+    phone: "+1 (365) 366-7490",
+    instagram: "wld.ntn",
+    city: "Toronto & Hamilton (GTA)",
   },
 
-  /* Where form submissions go.
-     Paste a Formspree (https://formspree.io) or similar form URL here,
-     e.g. "https://formspree.io/f/abcdwxyz". If left empty, the form
-     opens the client's email app with everything pre-filled to brand.email. */
-  formEndpoint: "",
+  /* Booking requests are saved by the server and show up in /admin.
+     Set OWNER_EMAIL on the server to also get an email for each one. */
+  formEndpoint: "/api/bookings",
 
-  currency: "USD",
+  currency: "CAD",
   depositPercent: 30,          // % deposit to lock the date
   includedHours: 4,            // hours included in each base price
 
@@ -59,10 +57,10 @@ window.WN_CONFIG = {
 
   /* Travel zones measured from home base. */
   travelZones: {
-    local:  { label: "Local (under 25 miles)", add: 0 },
-    near:   { label: "25 – 50 miles",          add: 100 },
-    far:    { label: "50 – 100 miles",         add: 225 },
-    travel: { label: "100+ miles / out of state", add: null }, // null = custom quote
+    local:  { label: "Local (under 40 km)", add: 0 },
+    near:   { label: "40 – 80 km",          add: 100 },
+    far:    { label: "80 – 160 km",         add: 225 },
+    travel: { label: "160+ km / out of province", add: null }, // null = custom quote
   },
 
   /* Date-based adjustments (percent of subtotal). */
@@ -77,3 +75,4 @@ window.WN_CONFIG = {
   minimumHours: 2,
   maximumHours: 12,
 };
+if (typeof module !== "undefined") module.exports = globalThis.WN_CONFIG || window.WN_CONFIG;

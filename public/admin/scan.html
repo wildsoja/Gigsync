@@ -1,0 +1,124 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
+<meta name="theme-color" content="#08060d">
+<meta name="robots" content="noindex">
+<title>Door Scanner | Wild Nation</title>
+<link rel="icon" href="/img/icon.png">
+<link href="https://fonts.googleapis.com/css2?family=Anton&family=JetBrains+Mono:wght@500&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/assets/css/site.css">
+<style>
+  body::after{display:none}
+  html,body{height:100%;overflow:hidden}
+  .scan{display:flex;flex-direction:column;height:100svh}
+  .bar{display:flex;gap:10px;align-items:center;padding:12px 14px;border-bottom:1px solid var(--line);background:var(--bg-2)}
+  .bar select{flex:1;padding:10px 12px}
+  .bar a{color:var(--muted);text-decoration:none;font-size:14px;white-space:nowrap}
+  .cam{position:relative;flex:1;background:#000;overflow:hidden}
+  .cam video{width:100%;height:100%;object-fit:cover}
+  .frame{position:absolute;inset:0;display:grid;place-items:center;pointer-events:none}
+  .frame div{width:min(70vw,300px);aspect-ratio:1;border-radius:24px;box-shadow:0 0 0 9999px rgba(0,0,0,.45);border:3px solid rgba(214,251,81,.9)}
+  .cam .hint{position:absolute;left:0;right:0;bottom:18px;text-align:center;color:#ddd;font-size:14px}
+  .nocam{position:absolute;inset:0;display:grid;place-items:center;text-align:center;padding:24px;color:var(--muted)}
+  .foot{padding:12px 14px calc(12px + env(safe-area-inset-bottom));border-top:1px solid var(--line);background:var(--bg-2)}
+  .counts{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}
+  .counts b{font-family:var(--display);font-weight:400;font-size:30px;color:var(--lime)}
+  .manual{display:flex;gap:8px}
+  .manual input{text-transform:uppercase;font-family:var(--mono);letter-spacing:.1em}
+  .result{position:fixed;inset:0;z-index:50;display:none;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:30px;gap:8px}
+  .result.show{display:flex}
+  .result.ok{background:#14532d}.result.already{background:#854d0e}.result.bad{background:#7f1d1d}
+  .result .icon{font-size:96px;line-height:1}
+  .result h2{font-family:var(--display);font-weight:400;font-size:54px;text-transform:uppercase;margin:0}
+  .result .who{font-size:24px;font-weight:700}
+  .result .sub{opacity:.85}
+  .result .btn{margin-top:22px}
+</style>
+</head>
+<body data-bare="1">
+<div class="scan" id="app">
+  <div class="bar"><a href="/admin">← Admin</a><select id="ev" aria-label="Event"><option value="">Any event</option></select></div>
+  <div class="cam"><video id="v" playsinline muted></video><div class="frame"><div></div></div><div class="hint">Point at the ticket QR code</div>
+    <div class="nocam" id="nocam" hidden></div></div>
+  <div class="foot">
+    <div class="counts"><span class="muted">Checked in</span><span><b id="cin">0</b> <span class="muted">/ <span id="csold">0</span></span></span></div>
+    <form class="manual" id="mf"><input id="code" placeholder="Type ticket code" autocomplete="off" autocapitalize="characters"><button class="btn sm">Check</button></form>
+  </div>
+</div>
+<div class="result" id="res" role="alert"><div class="icon" id="ri"></div><h2 id="rt"></h2><div class="who" id="rw"></div><div class="sub" id="rs"></div><button class="btn ghost" id="next">Scan next</button></div>
+<canvas id="c" hidden></canvas>
+<script src="/assets/js/site.js"></script>
+<script src="/vendor/jsQR.js"></script>
+<script>
+(async function () {
+  const $ = (id) => document.getElementById(id);
+  const me = await WN.api("/api/admin/me");
+  if (!me.signedIn) { location.href = "/admin"; return; }
+  const sum = await WN.api("/api/admin/summary");
+  const pre = new URLSearchParams(location.search).get("event");
+  sum.events.forEach((e) => $("ev").insertAdjacentHTML("beforeend", `<option value="${e.id}">${WN.esc(e.title)} · ${WN.esc(e.when)}</option>`));
+  const upcoming = sum.events.filter((e) => e.status === "published").slice(-1)[0];
+  $("ev").value = pre || (upcoming ? upcoming.id : "");
+  async function counts() {
+    const s = await WN.api("/api/admin/summary");
+    const e = s.events.find((x) => String(x.id) === $("ev").value);
+    const tot = e ? e.stats : s.events.reduce((a, x) => ({ sold: a.sold + x.stats.sold, checked_in: a.checked_in + x.stats.checked_in }), { sold: 0, checked_in: 0 });
+    $("cin").textContent = tot.checked_in; $("csold").textContent = tot.sold;
+  }
+  $("ev").onchange = counts; counts();
+
+  let busy = false, last = "", lastAt = 0;
+  const msgs = {
+    ok: ["ok", "✓", "Welcome in"], already: ["already", "!", "Already scanned"], void: ["bad", "✕", "Cancelled ticket"],
+    wrong_event: ["bad", "✕", "Wrong event"], invalid: ["bad", "✕", "Invalid ticket"],
+  };
+  async function check(token) {
+    if (busy) return; busy = true;
+    let r;
+    try { r = await WN.api("/api/admin/checkin", { method: "POST", body: { token, eventId: $("ev").value || undefined } }); }
+    catch (e) { r = { result: "invalid" }; if (/signed in/i.test(e.message)) location.href = "/admin"; }
+    const [cls, icon, title] = msgs[r.result] || msgs.invalid;
+    const t = r.ticket;
+    $("res").className = "result show " + cls; $("ri").textContent = icon; $("rt").textContent = title;
+    $("rw").textContent = t ? t.holder_name : "";
+    $("rs").textContent = t ? `${t.tier} · ${t.code}` + (r.result === "already" && t.checked_in_at ? ` · scanned at ${new Date(t.checked_in_at.replace(" ", "T") + "Z").toLocaleTimeString("en-CA", { hour: "numeric", minute: "2-digit" })}` : "") + (r.result === "wrong_event" ? ` · for ${t.event_title}` : "") : "";
+    if (navigator.vibrate) navigator.vibrate(cls === "ok" ? 80 : [200, 80, 200]);
+    if (cls === "ok") setTimeout(next, 1600);
+    counts();
+  }
+  function next() { $("res").className = "result"; busy = false; $("code").value = ""; }
+  $("next").onclick = next;
+  $("res").onclick = (e) => { if (e.target === $("res")) next(); };
+  $("mf").onsubmit = (e) => { e.preventDefault(); const v = $("code").value.trim(); if (v) check(v); };
+
+  // Camera + QR decoding
+  const video = $("v"), canvas = $("c"), ctx = canvas.getContext("2d", { willReadFrequently: true });
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment", width: { ideal: 1280 } }, audio: false });
+    video.srcObject = stream; await video.play();
+    const detector = "BarcodeDetector" in window ? new BarcodeDetector({ formats: ["qr_code"] }) : null;
+    async function tick() {
+      if (!busy && video.readyState >= 2) {
+        let text = null;
+        if (detector) { try { const c = await detector.detect(video); if (c[0]) text = c[0].rawValue; } catch (e) {} }
+        else {
+          const w = 480, h = Math.round(video.videoHeight / video.videoWidth * w) || 480;
+          canvas.width = w; canvas.height = h; ctx.drawImage(video, 0, 0, w, h);
+          const code = jsQR(ctx.getImageData(0, 0, w, h).data, w, h, { inversionAttempts: "dontInvert" });
+          if (code) text = code.data;
+        }
+        if (text && (text !== last || Date.now() - lastAt > 4000)) { last = text; lastAt = Date.now(); check(text); }
+      }
+      setTimeout(() => requestAnimationFrame(tick), 120);
+    }
+    tick();
+  } catch (e) {
+    $("nocam").hidden = false;
+    $("nocam").innerHTML = "Camera unavailable.<br>Allow camera access (the site must be on https), or type ticket codes below.";
+  }
+})();
+</script>
+</body>
+</html>

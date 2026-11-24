@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#08060d">
+<link rel="icon" href="/img/icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Anton&family=JetBrains+Mono:wght@500&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/assets/css/site.css">
+<title>Contact | Wild Nation</title>
+<meta name="description" content="Get in touch with Wild Nation Events and DJ Wild Soja.">
+</head>
+<body data-page="contact">
+<header class="page-head" style="padding-bottom:20px">
+  <div class="bgimg"></div><div class="glow v" style="width:420px;height:420px;right:-120px;top:40px"></div>
+  <div class="wrap">
+    <span class="eyebrow">Need our help?</span>
+    <h1 class="display h-xl" style="margin-top:14px">Get in<br><span class="lime">touch</span></h1>
+  </div>
+</header>
+<section class="section" style="padding-top:40px">
+  <div class="wrap split" style="align-items:start">
+    <div>
+      <p class="lead">Questions about tickets, booths, partnerships or booking? Send a message, or reach us directly.</p>
+      <div style="display:grid;gap:12px;margin-top:28px;max-width:420px">
+        <a class="fact" href="mailto:wildnationgta@gmail.com" style="text-decoration:none"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/></svg><div><small>Email</small><b>wildnationgta@gmail.com</b></div></a>
+        <a class="fact" href="tel:+13653667490" style="text-decoration:none"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M5 4h4l2 5-2.5 1.5a11 11 0 0 0 5 5L15 13l5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 3 6a2 2 0 0 1 2-2"/></svg><div><small>Phone</small><b>+1 (365) 366-7490</b></div></a>
+        <a class="fact" href="/book" style="text-decoration:none"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="3"/></svg><div><small>Booking a DJ?</small><b>Get an instant quote →</b></div></a>
+      </div>
+      <div class="socials" id="socials" style="margin-top:28px"></div>
+    </div>
+    <form class="card" id="contactForm" novalidate style="padding:clamp(22px,3vw,34px)">
+      <div class="row2">
+        <div class="field"><label for="cname">Name <span class="req">*</span></label><input id="cname" name="name" autocomplete="name" required></div>
+        <div class="field"><label for="cemail">Email <span class="req">*</span></label><input id="cemail" name="email" type="email" autocomplete="email" required></div>
+      </div>
+      <div class="field"><label for="csubject">Subject</label>
+        <select id="csubject" name="subject"><option>General question</option><option>Tickets / my order</option><option>Booth or table reservation</option><option>Partnership / sponsorship</option><option>Performing at an event</option><option>Other</option></select></div>
+      <div class="field"><label for="cmsg">Message <span class="req">*</span></label><textarea id="cmsg" name="message" required style="min-height:160px"></textarea></div>
+      <input type="text" name="_gotcha" style="display:none" tabindex="-1" autocomplete="off">
+      <button class="btn block lg">Send message</button>
+      <div class="form-msg" id="cmsgOut"></div>
+    </form>
+  </div>
+</section>
+<script src="/assets/js/site.js"></script>
+<script>
+document.getElementById("socials").innerHTML = document.querySelector(".footer .socials").innerHTML;
+document.getElementById("contactForm").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const f = e.target, out = document.getElementById("cmsgOut"), btn = f.querySelector("button");
+  btn.disabled = true;
+  try {
+    await WN.api("/api/messages", { method: "POST", body: { name: f.name.value, email: f.email.value, subject: f.subject.value, message: f.message.value, _gotcha: f._gotcha.value } });
+    f.reset(); out.className = "form-msg ok"; out.textContent = "Thanks! Your message was sent. We'll get back to you soon.";
+  } catch (err) { out.className = "form-msg err"; out.textContent = err.message; }
+  btn.disabled = false;
+});
+</script>
+</body>
+</html>

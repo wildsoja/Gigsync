@@ -1,0 +1,152 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#08060d">
+<link rel="icon" href="/img/icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Anton&family=JetBrains+Mono:wght@500&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/assets/css/site.css">
+<title>Tickets | Wild Nation</title>
+<meta name="description" content="Get tickets for this Wild Nation event.">
+</head>
+<body data-page="events">
+<main>
+  <section class="ev-hero">
+    <div class="blur" id="blur"></div>
+    <div class="wrap">
+      <div id="banner"></div>
+      <div class="ev-layout" id="layout" style="opacity:0;transition:opacity .4s">
+        <div><div class="ev-flyer"><img id="flyer" alt=""></div></div>
+        <div>
+          <a href="/events" class="eyebrow" style="text-decoration:none">← All events</a>
+          <h1 class="display ev-title" id="title"></h1>
+          <p class="lead" id="tagline" style="margin:0"></p>
+          <div class="ev-facts" id="facts"></div>
+          <div class="ev-desc" id="desc"></div>
+
+          <form class="tix" id="tix" novalidate>
+            <h2>Tickets</h2>
+            <div id="tiers"></div>
+            <div class="buyer" id="buyer">
+              <div class="row2">
+                <div class="field"><label for="name">Full name <span class="req">*</span></label><input id="name" name="name" autocomplete="name" required></div>
+                <div class="field"><label for="phone">Phone</label><input id="phone" name="phone" type="tel" autocomplete="tel"></div>
+              </div>
+              <div class="row2">
+                <div class="field"><label for="email">Email <span class="req">*</span></label><input id="email" name="email" type="email" autocomplete="email" required></div>
+                <div class="field"><label for="email2">Confirm email <span class="req">*</span></label><input id="email2" name="email2" type="email" autocomplete="email" required></div>
+              </div>
+              <p class="hint" style="margin:0">Your tickets are sent to this email.</p>
+            </div>
+            <div class="tix-foot">
+              <div class="tix-total"><span class="muted" id="count">Select tickets</span><b id="total">$0</b></div>
+              <button class="btn block lg" id="buy" disabled>Get tickets</button>
+              <div class="form-msg err" id="err"></div>
+              <div class="secure"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg><span id="secureTxt">Secure checkout · tickets delivered instantly</span></div>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  </section>
+</main>
+<div class="sticky-buy no-print" id="stickyBuy"><div><small class="muted" id="sCount">Tickets</small><br><b id="sTotal">$0</b></div><a class="btn" href="#tix">Get tickets</a></div>
+
+<script src="/assets/js/site.js"></script>
+<script>
+(async function () {
+  const $ = (id) => document.getElementById(id);
+  const slug = decodeURIComponent(location.pathname.split("/").pop());
+  const icons = {
+    date: '<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/>',
+    pin: '<path d="M12 21s-7-6.2-7-12a7 7 0 0 1 14 0c0 5.8-7 12-7 12z"/><circle cx="12" cy="9" r="2.5"/>',
+    id: '<rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="9" cy="12" r="2.5"/><path d="M14 10h4M14 14h4"/>',
+    shirt: '<path d="M8 3l-5 3 2 5 3-1v11h8V10l3 1 2-5-5-3a4 4 0 0 1-8 0z"/>',
+  };
+  const fact = (ic, label, val) => val ? `<div class="fact"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">${icons[ic]}</svg><div><small>${label}</small><b>${WN.esc(val)}</b></div></div>` : "";
+  let ev, cfg;
+  try { [cfg, ev] = await Promise.all([WN.api("/api/config"), WN.api("/api/events/" + encodeURIComponent(slug))]); }
+  catch (e) {
+    document.querySelector(".ev-hero .wrap").innerHTML = '<div class="empty-state" style="margin-top:60px"><h3>Event not found</h3><p>It may have ended or moved.</p><p style="margin-top:18px"><a class="btn" href="/events">See upcoming events</a></p></div>';
+    return;
+  }
+  WN.setCurrency(cfg.currency);
+  document.title = ev.title + " | Tickets | Wild Nation";
+  $("title").textContent = ev.title;
+  $("tagline").textContent = ev.tagline || "";
+  if (ev.flyer) { $("flyer").src = ev.flyer; $("flyer").alt = ev.title + " flyer"; $("blur").style.backgroundImage = `url("${ev.flyer}")`; }
+  $("facts").innerHTML = fact("date", "When", ev.when) + fact("pin", "Where", [ev.venue, ev.address, ev.city].filter(Boolean).join(", ")) + fact("id", "Age", ev.age) + fact("shirt", "Dress code", ev.dress_code);
+  $("desc").textContent = ev.description || "";
+  const params = new URLSearchParams(location.search);
+  let banner = "";
+  if (ev.status === "cancelled") banner = '<div class="banner" style="margin-bottom:24px">This event has been cancelled.</div>';
+  else if (params.get("cancelled")) banner = '<div class="banner" style="margin-bottom:24px">Checkout was cancelled. Your tickets weren\'t charged. You can try again below.</div>';
+  else if (cfg.demo) banner = '<div class="banner" style="margin-bottom:24px"><b>Test mode:</b> payments aren\'t connected yet, so checkout issues real tickets without charging. Connect Stripe before going live.</div>';
+  $("banner").innerHTML = banner;
+  if (cfg.demo) $("secureTxt").textContent = "Test mode · no payment is taken";
+  $("layout").style.opacity = 1;
+
+  const qty = {};
+  const stateLabel = { sold_out: "Sold out", ended: "Sales ended", not_started: "Coming soon" };
+  if (!ev.tiers.length || ev.status === "cancelled") {
+    $("tiers").innerHTML = '<div class="tier"><div class="t-info muted">Tickets aren\'t on sale yet.</div></div>';
+    $("buy").style.display = "none";
+  } else {
+    $("tiers").innerHTML = ev.tiers.map((t) => {
+      const on = t.state === "on_sale";
+      const max = Math.min(t.max_per_order, t.remaining ?? t.max_per_order);
+      return `<div class="tier ${on ? "" : "off"}" data-id="${t.id}" data-max="${max}" data-price="${t.price_cents}">
+        <div class="t-info"><div class="t-name">${WN.esc(t.name)}</div>${t.description ? `<div class="t-desc">${WN.esc(t.description)}</div>` : ""}
+          ${on && t.remaining !== null ? `<div class="t-left">Only ${t.remaining} left</div>` : ""}
+          ${t.state === "not_started" && t.sales_start ? `<div class="t-left">On sale ${new Date(t.sales_start).toLocaleString("en-CA", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })}</div>` : ""}</div>
+        <div class="t-price">${on ? (t.price_cents ? WN.money(t.price_cents) : "Free") : stateLabel[t.state] || ""}</div>
+        ${on ? `<div class="stepper"><button type="button" data-d="-1" aria-label="Fewer ${WN.esc(t.name)}" disabled>−</button><output>0</output><button type="button" data-d="1" aria-label="More ${WN.esc(t.name)}">+</button></div>` : ""}
+      </div>`;
+    }).join("");
+  }
+  function update() {
+    let n = 0, total = 0;
+    document.querySelectorAll(".tier[data-id]").forEach((row) => {
+      const q = qty[row.dataset.id] || 0; n += q; total += q * +row.dataset.price;
+      const out = row.querySelector("output"); if (!out) return;
+      out.textContent = q;
+      row.querySelector('[data-d="-1"]').disabled = q <= 0;
+      row.querySelector('[data-d="1"]').disabled = q >= +row.dataset.max;
+    });
+    $("count").textContent = n ? `${n} ticket${n > 1 ? "s" : ""}` : "Select tickets";
+    $("sCount").textContent = n ? `${n} ticket${n > 1 ? "s" : ""}` : "Tickets";
+    const txt = n && !total ? "Free" : WN.money(total);
+    $("total").textContent = txt; $("sTotal").textContent = n ? txt : (ev.from_cents != null ? "from " + WN.money(ev.from_cents) : "");
+    $("buy").disabled = !n;
+    $("buy").textContent = !n ? "Get tickets" : total ? (cfg.demo ? "Get tickets (test mode)" : "Continue to payment") : "Reserve free tickets";
+    $("buyer").classList.toggle("show", n > 0);
+  }
+  $("tiers").addEventListener("click", (e) => {
+    const b = e.target.closest("[data-d]"); if (!b) return;
+    const row = b.closest(".tier"), id = row.dataset.id;
+    qty[id] = Math.max(0, Math.min(+row.dataset.max, (qty[id] || 0) + +b.dataset.d));
+    update();
+  });
+  // Auto-select one ticket if there's only one type on sale.
+  const onSale = document.querySelectorAll(".tier[data-id]:not(.off)");
+  if (onSale.length === 1) qty[onSale[0].dataset.id] = 1;
+  update();
+
+  $("tix").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const f = e.target, err = $("err"); err.textContent = "";
+    if (!f.name.value.trim()) { err.textContent = "Please enter your name"; return f.name.focus(); }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(f.email.value.trim())) { err.textContent = "Please enter a valid email"; return f.email.focus(); }
+    if (f.email.value.trim().toLowerCase() !== f.email2.value.trim().toLowerCase()) { err.textContent = "Emails don't match"; return f.email2.focus(); }
+    const btn = $("buy"), label = btn.textContent; btn.disabled = true; btn.textContent = "Processing…";
+    try {
+      const r = await WN.api("/api/orders", { method: "POST", body: { event: slug, items: qty, name: f.name.value, email: f.email.value, phone: f.phone.value } });
+      location.href = r.redirect;
+    } catch (ex) { err.textContent = ex.message; btn.disabled = false; btn.textContent = label; }
+  });
+})();
+</script>
+</body>
+</html>

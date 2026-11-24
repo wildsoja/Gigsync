@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#08060d">
+<link rel="icon" href="/img/icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Anton&family=JetBrains+Mono:wght@500&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/assets/css/site.css">
+<title>Events &amp; Tickets | Wild Nation</title>
+<meta name="description" content="Upcoming Wild Nation events and tickets, plus recaps of past parties in Toronto, Hamilton and the GTA.">
+</head>
+<body data-page="events">
+<header class="page-head">
+  <div class="bgimg"></div><div class="glow m" style="width:420px;height:420px;left:-120px;top:40px"></div>
+  <div class="wrap">
+    <span class="eyebrow">Unleash</span>
+    <h1 class="display h-xl" style="margin-top:14px">Experience<br><span class="lime">the wild</span></h1>
+    <p class="lead">Join us for electrifying events that will leave you wanting more. Tickets are delivered instantly by email with a QR code for the door.</p>
+  </div>
+</header>
+
+<section class="section" id="upcoming" style="padding-top:20px">
+  <div class="wrap">
+    <div class="section-head"><div><span class="eyebrow">Tickets</span><h2 class="display h-lg">Upcoming events</h2></div></div>
+    <div class="events-grid" id="events"></div>
+  </div>
+</section>
+
+<section class="section" id="notify" style="padding-top:0">
+  <div class="wrap"><div class="card reveal" style="display:flex;justify-content:space-between;align-items:center;gap:24px;flex-wrap:wrap;padding:clamp(24px,4vw,44px)">
+    <div><span class="eyebrow">Sign up</span><h2 class="display h-sm" style="margin:10px 0 6px">Be notified for all our events</h2><p class="muted" style="margin:0">No spam. Just the next drop.</p></div>
+    <div style="flex:1;min-width:280px;max-width:480px"><form class="inline-form" data-subscribe><label class="sr-only" for="nemail">Email</label><input id="nemail" name="email" type="email" placeholder="you@email.com" required><button class="btn">Notify me</button></form><div class="form-msg"></div></div>
+  </div></div>
+</section>
+
+<section class="section" id="recaps" style="padding-top:20px">
+  <div class="wrap">
+    <div class="section-head"><div><span class="eyebrow">Missed them?</span><h2 class="display h-lg">Best experiences</h2><p class="lead" style="margin-top:12px">Don't worry, we got you. Tap a flyer for the story.</p></div></div>
+    <div class="recap-grid" id="recapGrid"></div>
+  </div>
+</section>
+
+<section class="section" id="faq" style="padding-top:20px">
+  <div class="wrap">
+    <div class="section-head"><div><span class="eyebrow">FAQ</span><h2 class="display h-lg">Questions</h2></div><a class="btn ghost" href="/contact">Contact us</a></div>
+    <div class="faq">
+      <details><summary>How do I buy tickets?</summary><p>Pick an event above, choose your tickets, and check out. Your tickets arrive by email right away, each with its own QR code. You can also open them any time from the link on your confirmation page.</p></details>
+      <details><summary>How do I get in at the door?</summary><p>Show the QR code on your phone (or a screenshot or printout). We scan it at the door. Each code works once, so don't share screenshots of your ticket.</p></details>
+      <details><summary>Can I get a refund?</summary><p>There are no returns on Wild Nation tickets, but you can pass your ticket on to someone else.</p></details>
+      <details><summary>Didn't get your tickets?</summary><p>Check your spam folder first. Still nothing? Email us at <a class="lime" href="mailto:wildnationgta@gmail.com">wildnationgta@gmail.com</a> with your order number and we'll resend them.</p></details>
+      <details><summary>Are there age restrictions?</summary><p>Most of our events are 19+ with valid government ID. Each event page lists its age policy.</p></details>
+      <details><summary>Is there parking?</summary><p>Parking depends on the venue. Check the event page for the address, or contact the venue directly.</p></details>
+      <details><summary>Can I reserve a booth or table?</summary><p>When booths are available they're listed as a ticket type on the event page. For larger groups, send us a message.</p></details>
+    </div>
+  </div>
+</section>
+
+<script src="/assets/js/site.js"></script>
+<script src="/assets/js/recaps.js"></script>
+<script>
+WN.loadEvents(document.getElementById("events"));
+WN_renderRecaps(document.getElementById("recapGrid"));
+</script>
+</body>
+</html>

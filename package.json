@@ -1,0 +1,22 @@
+{
+  "name": "wild-nation",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Wild Nation Events + DJ Wild Soja: site, DJ booking quotes and native ticketing",
+  "main": "server.js",
+  "type": "commonjs",
+  "engines": {
+    "node": ">=22.13"
+  },
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js",
+    "test": "node --test test/*.test.js"
+  },
+  "dependencies": {
+    "express": "^4.22.3",
+    "jsqr": "^1.4.0",
+    "nodemailer": "^10.6.1",
+    "qrcode": "^1.5.4"
+  }
+}

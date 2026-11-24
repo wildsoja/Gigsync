@@ -2,27 +2,26 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Book Wild Soja | Instant Event Quote</title>
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#08060d">
+<link rel="icon" href="/img/icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Anton&family=JetBrains+Mono:wght@500&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/assets/css/site.css">
+
+<title>Book DJ Wild Soja | Instant Quote</title>
 <meta name="description" content="Tell us about your event and get an instant price estimate from DJ Wild Soja and Wild Nation Events.">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Anton&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="assets/styles.css">
 </head>
-<body class="booking">
-<nav class="nav"><div class="wrap">
-  <a class="logo" href="./">Wild<span>Soja</span></a>
-  <div class="nav-links"><a href="./">&larr; Back to site</a></div>
-</div></nav>
-
+<body class="booking" data-page="wildsoja">
+<header class="page-head" style="padding-bottom:30px">
+  <div class="bgimg"></div><div class="glow m" style="width:380px;height:380px;right:-100px;top:60px"></div>
+  <div class="wrap">
+    <span class="eyebrow">Wild Soja · Booking</span>
+    <h1 class="display h-lg" style="margin-top:14px">Book your <span class="lime">event</span></h1>
+    <p class="lead">Fill in the details and your price updates as you go. Sending a request is free. We'll confirm availability and send your final quote, usually within 24 hours.</p>
+  </div>
+</header>
 <div class="wrap">
-  <header class="book-hero">
-    <span class="eyebrow">Wild Nation Events &middot; Booking</span>
-    <h1>Book your event</h1>
-    <p>Fill in the details below and your price updates as you go. Submitting doesn't charge you anything. We'll confirm availability and send a final quote.</p>
-  </header>
-
   <div class="book-layout">
     <div>
       <form id="booking" novalidate>
@@ -80,7 +79,7 @@
 
         <fieldset>
           <legend>The vibe <small>optional</small></legend>
-          <div class="field"><label for="genres">Genres &amp; energy</label><input id="genres" name="genres" placeholder="Afrobeats, amapiano, hip-hop, R&amp;B, house, throwbacks..."></div>
+          <div class="field"><label for="genres">Genres &amp; energy</label><input id="genres" name="genres" placeholder="e.g. Afrobeats, hip-hop, R&amp;B, house, throwbacks..."></div>
           <div class="row">
             <div class="field"><label for="mustPlay">Must-play songs</label><textarea id="mustPlay" name="mustPlay"></textarea></div>
             <div class="field"><label for="doNotPlay">Do-not-play</label><textarea id="doNotPlay" name="doNotPlay"></textarea></div>
@@ -97,13 +96,13 @@
       </form>
 
       <div class="success" id="success">
-        <div class="check">&check;</div>
+        <div class="check-burst">✓</div>
         <h2>Request sent</h2>
         <p id="successMsg">Thanks! We've got your details and will confirm availability and your final quote shortly.</p>
         <div class="ref" id="refNum"></div>
         <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap">
           <button class="btn ghost" type="button" onclick="window.print()">Save / print quote</button>
-          <a class="btn" href="./">Back to site</a>
+          <a class="btn" href="/">Back to site</a>
         </div>
       </div>
     </div>
@@ -114,24 +113,24 @@
       <ul class="lines" id="lines"></ul>
       <div class="total"><span>Estimated total</span><b id="total">$0</b></div>
       <div class="deposit"><span id="depositLabel">Deposit to book</span><span id="deposit">$0</span></div>
-      <div class="custom-flag" id="customFlag">Travel 100+ miles is quoted separately. We'll add travel to your final quote.</div>
+      <div class="custom-flag" id="customFlag">Travel over 160 km is quoted separately. We'll add travel to your final quote.</div>
       <button class="btn" type="submit" form="booking" id="submitBtn">Send booking request</button>
       <p class="notice">This is an estimate based on what you've entered. Your final price is confirmed after we check availability and event details.</p>
     </aside>
   </div>
 </div>
 
+
+</div>
 <div class="mobile-total" id="mobileTotal">
   <div><small>Estimated total</small><b id="mTotal">$0</b></div>
   <a class="btn sm" href="#quote">Review &amp; send</a>
 </div>
 
-<footer><div class="wrap">
-  <span>&copy; <span id="yr"></span> Wild Nation Events. DJ Wild Soja.</span>
-</div></footer>
 
-<script src="assets/config.js"></script>
-<script src="assets/pricing.js"></script>
-<script src="assets/book.js"></script>
+<script src="/assets/js/site.js"></script>
+<script src="/assets/js/booking-config.js"></script>
+<script src="/assets/js/pricing.js"></script>
+<script src="/assets/js/book.js"></script>
 </body>
 </html>

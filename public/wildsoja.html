@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#08060d">
+<link rel="icon" href="/img/icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Anton&family=JetBrains+Mono:wght@500&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/assets/css/site.css">
+<title>DJ Wild Soja | Book the DJ</title>
+<meta name="description" content="DJ Wild Soja, the sound behind Wild Nation. Book for weddings, birthdays, corporate events and clubs across the GTA. Instant online quote.">
+</head>
+<body data-page="wildsoja">
+<header class="page-head" style="padding-bottom:90px">
+  <div class="bgimg"></div>
+  <div class="glow m" style="width:480px;height:480px;right:-140px;top:20px"></div>
+  <div class="glow v" style="width:420px;height:420px;left:-160px;bottom:-120px"></div>
+  <div class="wrap">
+    <span class="eyebrow">The sound behind Wild Nation</span>
+    <h1 class="display" style="font-size:clamp(90px,20vw,280px);margin-top:10px">Wild<br><span class="lime">Soja</span></h1>
+    <div class="eq" data-bars="64" aria-hidden="true"></div>
+    <p class="lead">From the very first Entanglement in 2020 to themed nights across Toronto, Hamilton and St. Catharines, Wild Soja keeps the floor moving. Now booking weddings, private parties and corporate events.</p>
+    <p style="margin-top:30px;display:flex;gap:12px;flex-wrap:wrap"><a class="btn lg" href="/book">Get an instant quote <span class="arrow">→</span></a><a class="btn ghost lg" href="#services">Services</a></p>
+  </div>
+</header>
+
+<div class="marquee-wrap" aria-hidden="true"><div class="marquee alt"><div class="marquee-track">
+  <span>Weddings</span><span>Birthdays</span><span>Corporate</span><span>Clubs &amp; lounges</span><span>Proms</span><span>Festivals</span>
+  <span>Weddings</span><span>Birthdays</span><span>Corporate</span><span>Clubs &amp; lounges</span><span>Proms</span><span>Festivals</span>
+</div></div></div>
+
+<section class="section" id="services">
+  <div class="wrap">
+    <div class="section-head reveal"><div><span class="eyebrow">Services</span><h2 class="display h-lg">Every kind<br>of room</h2></div>
+      <p class="muted" style="max-width:380px">Prices include <span data-hours>4</span> hours of DJ time. Add sound, lighting, MC and effects when you book.</p></div>
+    <div class="grid-3" id="services-grid"></div>
+  </div>
+</section>
+
+<section class="section" style="padding-top:0">
+  <div class="wrap">
+    <div class="section-head reveal"><div><span class="eyebrow">How it works</span><h2 class="display h-lg">Three steps</h2></div></div>
+    <div class="grid-3">
+      <div class="card reveal"><div class="num">01</div><h3>Fill out the form</h3><p>Date, venue, guest count and the vibe. Your price updates as you go.</p></div>
+      <div class="card reveal"><div class="num">02</div><h3>Get your quote</h3><p>We confirm availability and send a final quote, usually within 24 hours.</p></div>
+      <div class="card reveal"><div class="num">03</div><h3>Lock the date</h3><p>A <span data-deposit>30</span>% deposit holds your date. Then we plan the music together.</p></div>
+    </div>
+  </div>
+</section>
+
+<section class="section" style="padding-top:0">
+  <div class="wrap"><div class="soja-band reveal" style="text-align:center">
+    <h2 class="display" style="font-size:clamp(48px,8vw,110px)">Let's get <span class="lime">wild.</span></h2>
+    <p class="lead" style="margin:16px auto 28px">Two minutes, one form, instant price.</p>
+    <a class="btn magenta lg" href="/book">Start your booking <span class="arrow">→</span></a>
+  </div></div>
+</section>
+
+<script src="/assets/js/site.js"></script>
+<script src="/assets/js/booking-config.js"></script>
+<script>
+(function(){
+  const C = window.WN_CONFIG;
+  const fmt = new Intl.NumberFormat("en-CA",{style:"currency",currency:C.currency,maximumFractionDigits:0});
+  const blurbs = {
+    wedding:"Ceremony to last dance. Mic for toasts, grand entrances and a planned timeline.",
+    corporate:"Launches, galas, holiday parties. Polished, on-brand, on schedule.",
+    private:"House parties, anniversaries, reunions. Your crowd, your playlist.",
+    birthday:"Milestone birthdays and Sweet 16s with lights and hype.",
+    school:"Proms, homecoming and formals. Clean edits, big energy.",
+    club:"Club, bar and lounge residencies or one-off nights.",
+    festival:"Main stage and outdoor sets with full production.",
+    other:"Got something different in mind? Tell us about it."
+  };
+  document.getElementById("services-grid").innerHTML = Object.entries(C.eventTypes).map(([k,t]) =>
+    `<a class="card reveal" href="/book?type=${k}" style="text-decoration:none;display:flex;flex-direction:column;gap:8px">
+      <h3>${t.label}</h3><p style="flex:1">${blurbs[k]||""}</p>
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-top:10px"><span>From <b class="lime">${fmt.format(t.base)}</b></span><span class="lime">→</span></div></a>`).join("");
+  document.querySelectorAll("[data-hours]").forEach(e=>e.textContent=C.includedHours);
+  document.querySelectorAll("[data-deposit]").forEach(e=>e.textContent=C.depositPercent);
+  WN.reveal();
+})();
+</script>
+</body>
+</html>

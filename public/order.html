@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#08060d">
+<link rel="icon" href="/img/icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Anton&family=JetBrains+Mono:wght@500&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/assets/css/site.css">
+<title>Your tickets | Wild Nation</title>
+<meta name="robots" content="noindex">
+</head>
+<body data-page="events" data-solid-nav="1">
+<main class="center-page"><div class="wrap" id="root"><p class="muted" style="text-align:center">Loading your order…</p></div></main>
+<script src="/assets/js/site.js"></script>
+<script src="/assets/js/ticket-card.js"></script>
+<script>
+(async function () {
+  const root = document.getElementById("root");
+  const id = location.pathname.split("/").pop(), k = new URLSearchParams(location.search).get("k");
+  let tries = 0;
+  async function load() {
+    let o;
+    try { o = await WN.api(`/api/orders/${encodeURIComponent(id)}?k=${encodeURIComponent(k || "")}`); }
+    catch (e) { root.innerHTML = '<div class="empty-state"><h3>Order not found</h3><p>Check the link in your email, or contact us with your order number.</p></div>'; return; }
+    if (o.status === "pending") {
+      if (tries++ < 15) { root.innerHTML = '<div class="order-head"><h1 class="display h-md">Confirming payment…</h1><p class="muted">Hang tight, this only takes a few seconds.</p></div>'; return setTimeout(load, 2000); }
+      root.innerHTML = '<div class="empty-state"><h3>Payment not confirmed yet</h3><p>If you were charged, your tickets will arrive by email shortly. Refresh this page in a minute.</p></div>'; return;
+    }
+    if (o.status === "cancelled") { root.innerHTML = '<div class="empty-state"><h3>Order cancelled</h3><p>This order was cancelled and its tickets are no longer valid.</p></div>'; return; }
+    const n = o.tickets.length;
+    root.innerHTML = `
+      <div class="order-head">
+        <div class="check-burst no-print">✓</div>
+        <span class="eyebrow">Order ${o.id}</span>
+        <h1 class="display h-md" style="margin:12px 0">You're in, ${WN.esc(o.buyer_name.split(" ")[0])}!</h1>
+        <p class="muted">${n} ticket${n > 1 ? "s" : ""} for <b style="color:var(--text)">${WN.esc(o.event.title)}</b>. ${o.emailed ? `We've emailed them to <b style="color:var(--text)">${WN.esc(o.buyer_email)}</b>.` : "Save this page or screenshot your tickets."}</p>
+        ${o.demo ? '<div class="banner" style="margin-top:16px">Test mode order: no payment was taken.</div>' : ""}
+        <div class="no-print" style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin-top:22px">
+          <button class="btn" onclick="print()">Save / print tickets</button>
+          <a class="btn ghost" href="/event/${encodeURIComponent(o.event.slug)}">Event details</a>
+        </div>
+        ${n > 1 ? '<p class="hint no-print" style="margin-top:16px">Going with friends? Tap a ticket to open it on its own and send them the link. Each QR code works once.</p>' : ""}
+      </div>
+      <div class="ticket-list">${o.tickets.map((t) => `<a href="/t/${encodeURIComponent(t.token)}" style="text-decoration:none">${WN_ticketCard(t, o.event)}</a>`).join("")}</div>
+      <div class="card no-print" style="max-width:520px;margin:40px auto 0">
+        <h3 style="margin:0 0 10px">Order summary</h3>
+        ${o.items.map((i) => `<div style="display:flex;justify-content:space-between;padding:6px 0;color:var(--muted)"><span>${i.qty} × ${WN.esc(i.name)}</span><span>${WN.money(i.qty * i.unit_cents, o.currency)}</span></div>`).join("")}
+        <div style="display:flex;justify-content:space-between;padding-top:10px;margin-top:6px;border-top:1px solid var(--line);font-weight:700"><span>Total</span><span>${o.total_cents ? WN.money(o.total_cents, o.currency) : "Free"}</span></div>
+      </div>`;
+  }
+  load();
+})();
+</script>
+</body>
+</html>

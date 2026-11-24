@@ -1,6 +1,6 @@
 (function(){
   var C = window.WN_CONFIG, P = window.WNPricing;
-  var fmt = new Intl.NumberFormat("en-US",{style:"currency",currency:C.currency,maximumFractionDigits:0});
+  var fmt = new Intl.NumberFormat("en-CA",{style:"currency",currency:C.currency,maximumFractionDigits:0});
   var form = document.getElementById("booking"), $ = function(id){ return document.getElementById(id); };
   var DRAFT_KEY = "wn-booking-draft";
 
@@ -40,7 +40,6 @@
 
   var tomorrow = new Date(); tomorrow.setDate(tomorrow.getDate()+1);
   $("date").min = tomorrow.toISOString().slice(0,10);
-  $("yr").textContent = new Date().getFullYear();
   $("depositLabel").textContent = C.depositPercent + "% deposit to book";
 
   // ---- Read values ----
@@ -174,6 +173,7 @@
     btn.disabled = true; btn.textContent = "Sending...";
     var payload = Object.assign({}, v, {
       reference: ref,
+      addOnKeys: v.addOns,
       addOns: v.addOns.map(function(k){ return C.addOns[k].label; }).join(", "),
       eventType: C.eventTypes[v.type].label,
       estimateTotal: fmt.format(q.total) + (q.custom ? " + travel" : ""),

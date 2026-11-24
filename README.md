@@ -1,48 +1,57 @@
-# Wild Soja / Wild Nation booking site
+# Wild Nation
 
-A static website for DJ Wild Soja and Wild Nation Events. It has a landing page and a booking
-form that shows clients a live price estimate as they fill it in, then sends you the request.
+Website, DJ booking quotes and a built-in ticketing system for **Wild Nation Events** and **DJ Wild Soja**.
 
-- `index.html`: landing page (services, how it works, call to action)
-- `book.html`: booking form + live quote. **This is the link you send clients.**
-- `assets/config.js`: **all your prices, add-ons, contact info and form settings. Edit this file.**
-- `assets/pricing.js`: the pricing math
-- `assets/book.js`: form behavior (validation, saving drafts, submitting)
-
-## 1. Set your prices
-Open `assets/config.js` and change the numbers:
-
-| Setting | What it does |
+| Page | What it does |
 |---|---|
-| `eventTypes` | Base price per event type (covers `includedHours`) and the hourly rate for extra time |
-| `guestTiers` | Extra charge for bigger crowds |
-| `addOns` | Sound, lighting, MC, sparks, etc. Add, remove or rename freely |
-| `travelZones` | Travel fees by distance. `add: null` means "custom quote" |
-| `surcharges` | Friday/Saturday %, short-notice %, holiday dates % |
-| `depositPercent` | Deposit shown to the client |
+| `/` | Home: layered parallax hero, "Still not sold?" scroll sequence, upcoming events, past-event archive, Wild Soja promo, mailing list |
+| `/events` | All upcoming events, recaps of past parties, FAQ |
+| `/event/<name>` | Event page with ticket types and checkout |
+| `/order/<id>` | Order confirmation with every ticket's QR code |
+| `/t/<ticket>` | A single ticket (what the QR code opens). Share it with a friend |
+| `/wildsoja` | DJ page with services and prices |
+| `/book` | DJ booking form with a live price estimate (**send this link to clients**) |
+| `/contact` | Contact form |
+| `/admin` | Your dashboard: events, ticket sales, attendees, comp tickets, DJ bookings, messages |
+| `/admin/scan` | Door scanner. Open on a phone, point the camera at tickets |
 
-How a quote is calculated: base price + extra hours + crowd size + add-ons + travel, then
-weekend/holiday and short-notice percentages are added on top of that.
+## How ticketing works
 
-## 2. Decide how requests reach you
-In `assets/config.js`:
-- Set `brand.email` to your booking email.
-- **Recommended:** create a free form at [formspree.io](https://formspree.io), copy its URL
-  (looks like `https://formspree.io/f/abcdwxyz`) into `formEndpoint`. Every request lands in your
-  inbox with the full breakdown and a reference number like `WN-261124-AB12`.
-- If `formEndpoint` is left empty, the form opens the client's email app with everything
-  pre-filled to your email. Works, but the client has to hit send.
+1. In `/admin`, create an event: flyer, date, venue and ticket types (e.g. Early Bird $25 × 50, GA $35 × 200, VIP Booth $450 × 6). Each type can have its own sale start/end times and per-order limit. Set status to **Published**.
+2. Buyers pick tickets and pay with **Stripe** (card, Apple Pay, Google Pay). Tickets are held for 20 minutes during checkout, so nothing oversells.
+3. Each ticket gets a unique, cryptographically signed QR code. Buyers see their tickets on screen and get them by email.
+4. At the door, open `/admin/scan` on any phone. Green = welcome in, yellow = already scanned, red = invalid, cancelled or wrong event. You can also type a code by hand.
+5. Watch sales and check-ins live in `/admin`. Export attendees to CSV, resend tickets, cancel orders, or send free **comp tickets** for guest list and performers.
 
-## 3. Put it online (free)
-- **GitHub Pages:** repo Settings → Pages → deploy from branch → root. Your link will be
-  `https://<username>.github.io/<repo>/book.html`.
-- **Netlify:** drag the folder into app.netlify.com/drop. You can attach a custom domain like
-  `book.wildnation.com`.
+**Test mode:** until you add a Stripe key, checkout issues real tickets without taking payment, and the site shows a "test mode" banner. Use this to try everything end to end.
 
-## Pre-filled client links
-You can send links with details already filled in:
-- `book.html?type=wedding`
-- `book.html?type=corporate&guests=250&travel=near`
-- `book.html?type=private&addOns=sound,lighting`
+## Run it locally
 
-Event type keys: `wedding, corporate, private, birthday, school, club, festival, other`.
+Requires Node.js 22.13+.
+
+```bash
+npm install
+ADMIN_PASSWORD=pick-one npm start      # http://localhost:3000, admin at /admin
+npm test                               # automated tests
+```
+
+A clearly labelled **Sample Night** event is created on first run. Edit or delete it in `/admin`.
+
+## Go live
+
+1. **Host it** anywhere that runs Node and has a persistent disk (the database and uploaded flyers live in `DATA_DIR`):
+   - **Render:** connect this repo. `render.yaml` sets everything up, including a 1 GB disk.
+   - **Railway / Fly.io:** use the `Dockerfile` and mount a volume at `/data`.
+2. **Set environment variables** (see `.env.example`): `ADMIN_PASSWORD` and `BASE_URL` at minimum.
+3. **Stripe:** create an account at stripe.com and add `STRIPE_SECRET_KEY`. Then add a webhook (Developers → Webhooks) pointing to `https://YOUR-SITE/api/stripe/webhook` for the events `checkout.session.completed` and `checkout.session.expired`, and put its signing secret in `STRIPE_WEBHOOK_SECRET`. Do refunds in the Stripe dashboard, then cancel the order in `/admin` so its tickets stop working.
+4. **Email:** add SMTP settings so tickets get emailed. For Gmail, create an *app password* (Google Account → Security → App passwords). Set `OWNER_EMAIL` to get notified of every sale, booking and message.
+5. **Domain:** point your domain at the host and set `BASE_URL` to it.
+
+Back up `DATA_DIR` (`wildnation.db`, `secret.key`, `uploads/`). If `secret.key` is lost, existing QR codes stop scanning.
+
+## Change things
+
+- **DJ prices, add-ons, travel fees, deposit:** `public/assets/js/booking-config.js`
+- **Past event recaps:** `public/assets/js/recaps.js` (images in `public/img/recaps/`)
+- **Contact info / socials:** top of `public/assets/js/site.js`
+- **Colours & fonts:** top of `public/assets/css/site.css`
