@@ -641,6 +641,12 @@ app.get("/api/admin/campaigns", (req, res) => res.json(q.all(`SELECT c.*, e.titl
 // ---------- pages ----------
 app.use("/uploads", express.static(UPLOADS, { maxAge: "30d" }));
 app.get("/event/:slug", (req, res) => res.sendFile(path.join(PUBLIC, "event.html")));
+// Pages use relative asset paths (so they also open straight from disk). On nested
+// URLs like /blog/my-post those resolve to /blog/assets/..., so serve them from public/.
+app.get(/^\/(?:[^/]+\/)+?(assets|img|vendor)\/(.+)$/, (req, res, next) => {
+  const [, dir, rest] = req.path.match(/^\/(?:[^/]+\/)+?(assets|img|vendor)\/(.+)$/);
+  res.sendFile(rest, { root: path.join(PUBLIC, dir), maxAge: "1h", dotfiles: "deny" }, (err) => err && next());
+});
 app.get("/blog/:slug", (req, res) => res.sendFile(path.join(PUBLIC, "post.html")));
 app.get("/order/:id", (req, res) => res.sendFile(path.join(PUBLIC, "order.html")));
 app.get("/booking/:ref", (req, res) => res.sendFile(path.join(PUBLIC, "booking.html")));

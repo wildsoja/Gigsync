@@ -3,7 +3,7 @@ window.WN_ticketCard = function (t, ev) {
   const used = t.checked_in_at, voided = t.status !== "valid";
   return `<article class="ticket ${used || voided ? "used" : ""}">
     <div class="t-top"><div class="bg" style="${ev.flyer ? `background-image:url('${WN.esc(ev.flyer)}')` : ""}"></div>
-      <img class="logo" src="/img/logo.webp" alt="Wild Nation">
+      <img class="logo" src="img/logo.webp" alt="Wild Nation">
       <span class="t-tier">${WN.esc(t.tier)}</span>
       <h2>${WN.esc(ev.title)}</h2>
       <div class="t-meta">${WN.esc(ev.when)}<br>${WN.esc([ev.venue, ev.city].filter(Boolean).join(" · "))}</div></div>

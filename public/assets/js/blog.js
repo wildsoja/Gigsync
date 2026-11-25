@@ -4,7 +4,7 @@ window.WNBlog = (function () {
   const d = (iso) => new Date(iso + "T12:00:00");
   // Dates on the 1st are shown as month + year (older recaps only have a month).
   const fmtDate = (iso) => d(iso).toLocaleDateString("en-CA", iso.endsWith("-01") ? { month: "long", year: "numeric" } : { month: "long", day: "numeric", year: "numeric" });
-  const FALLBACK = "/img/hero/bg.webp";
+  const FALLBACK = "img/hero/bg.webp";
   const monthYear = (iso) => d(iso).toLocaleDateString("en-CA", { month: "short", year: "numeric" }).replace(".", "");
   const meta = (p) => `<div class="post-meta">${p.tag ? `<span class="tag">${esc(p.tag)}</span>` : ""}<span class="m-date">${monthYear(p.published_at)} ·</span><span>${p.minutes} min read</span></div>`;
 

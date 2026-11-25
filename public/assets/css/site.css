@@ -240,7 +240,7 @@ select option{background:var(--bg-2)}
 
 /* Page header (subpages) */
 .page-head{padding:150px 0 60px;position:relative;overflow:hidden}
-.page-head .bgimg{position:absolute;inset:0;z-index:-2;background:url(/img/hero/bg.webp) center/cover;opacity:.35;mask-image:linear-gradient(#000,transparent)}
+.page-head .bgimg{position:absolute;inset:0;z-index:-2;background:url(../../img/hero/bg.webp) center/cover;opacity:.35;mask-image:linear-gradient(#000,transparent)}
 .page-head .lead{margin-top:18px}
 
 /* Footer */
@@ -489,3 +489,4 @@ input[type=range]{padding:0;border:0;background:transparent;accent-color:var(--l
 .estimate small{display:block;font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
 .estimate b{font-family:var(--display);font-weight:400;font-size:44px;line-height:1;color:var(--lime)}
 .estimate p{flex:1;min-width:200px;margin:0;font-size:13px;color:var(--muted)}
+.preview-bar{position:fixed;left:50%;bottom:14px;transform:translateX(-50%);z-index:60;max-width:calc(100% - 24px);background:rgba(247,231,105,.95);color:#111;font-size:13px;padding:9px 16px;border-radius:999px;box-shadow:0 8px 24px rgba(0,0,0,.4);text-align:center}

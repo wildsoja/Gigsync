@@ -9,22 +9,22 @@
 <meta property="og:title" content="Wild Nation">
 <meta property="og:description" content="Don't think inside the box… wild out on it. Immersive nights across Hamilton, Toronto and Niagara.">
 <meta property="og:image" content="/img/hero/bg.webp">
-<link rel="icon" href="/img/icon.png">
+<link rel="icon" href="img/icon.png">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Anton&family=JetBrains+Mono:wght@500&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
-<link rel="preload" as="image" href="/img/hero/bg.webp">
-<link rel="stylesheet" href="/assets/css/site.css">
+<link rel="preload" as="image" href="img/hero/bg.webp">
+<link rel="stylesheet" href="assets/css/site.css">
 </head>
 <body data-page="home">
 
 <section class="hero" id="hero" aria-label="Wild Nation">
-  <img class="layer l-bg" data-depth="0.15" src="/img/hero/bg.webp" alt="">
-  <img class="layer l-sparkles" data-depth="0.25" src="/img/hero/sparkles.webp" alt="">
-  <img class="layer l-smoke" data-depth="0.3" src="/img/hero/smoke.webp" alt="">
+  <img class="layer l-bg" data-depth="0.15" src="img/hero/bg.webp" alt="">
+  <img class="layer l-sparkles" data-depth="0.25" src="img/hero/sparkles.webp" alt="">
+  <img class="layer l-smoke" data-depth="0.3" src="img/hero/smoke.webp" alt="">
   <div class="hero-title" data-depth="0.45"><h1>Wild<br>Nation</h1></div>
-  <img class="layer l-crowd1" data-depth="0.08" src="/img/hero/crowd1.webp" alt="">
-  <img class="layer l-crowd2" data-depth="0.05" src="/img/hero/crowd2.webp" alt="">
-  <img class="layer l-black" data-depth="0" src="/img/hero/crowd-black.webp" alt="">
+  <img class="layer l-crowd1" data-depth="0.08" src="img/hero/crowd1.webp" alt="">
+  <img class="layer l-crowd2" data-depth="0.05" src="img/hero/crowd2.webp" alt="">
+  <img class="layer l-black" data-depth="0" src="img/hero/crowd-black.webp" alt="">
   <div class="shade"></div>
   <div class="hero-copy">
     <p class="tag">Don't think inside the box… <em>wild out on it!!!</em></p>
@@ -79,7 +79,7 @@
       </div>
       <p style="margin-top:32px"><a class="btn" href="/events">See events <span class="arrow">→</span></a></p>
     </div>
-    <div class="tilt-img reveal"><img src="/img/recaps/euphoria-2022.webp" alt="Euphoria 2022 flyer" loading="lazy"></div>
+    <div class="tilt-img reveal"><img src="img/recaps/euphoria-2022.webp" alt="Euphoria 2022 flyer" loading="lazy"></div>
   </div>
 </section>
 
@@ -114,8 +114,9 @@
   </div>
 </section>
 
-<script src="/assets/js/site.js"></script>
-<script src="/assets/js/recaps.js"></script>
+<script src="assets/js/preview-data.js"></script>
+<script src="assets/js/site.js"></script>
+<script src="assets/js/recaps.js"></script>
 <script>
 WN.loadEvents(document.getElementById("events"), { limit: 3 });
 WN_renderRecaps(document.getElementById("rail"), { limit: 12 });

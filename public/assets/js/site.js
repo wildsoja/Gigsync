@@ -11,13 +11,63 @@ window.WN = (function () {
     ],
   };
   const page = document.body.dataset.page || "";
+
+  /* ---- Preview mode: the page was opened straight from disk (double-clicked) ----
+     There's no server, so site links point at the .html files, read-only data comes
+     from assets/js/preview-data.js, and actions (buying, booking, signing up) explain
+     that they need the live site. */
+  const FILE = location.protocol === "file:";
+  function fileHref(p) {
+    if (!FILE || typeof p !== "string" || !p.startsWith("/") || p.startsWith("//")) return p;
+    const [, path, rest] = p.match(/^([^?#]*)(.*)$/);
+    let m;
+    if (path === "/") return "index.html" + rest;
+    if ((m = path.match(/^\/event\/(.+)$/))) return "event.html?e=" + m[1] + rest.replace(/^\?/, "&");
+    if ((m = path.match(/^\/blog\/(.+)$/))) return "post.html?p=" + m[1] + rest.replace(/^\?/, "&");
+    if (/^\/(assets|img|vendor)\//.test(path)) return path.slice(1) + rest;
+    return path.slice(1) + ".html" + rest;
+  }
+  const PREVIEW_MSG = "This works on the live site. Opened from your computer, the site is a preview only. To try it fully, start it with npm start (see the README).";
+  async function previewApi(url, opts) {
+    const D = window.WN_PREVIEW || { events: [], posts: [], config: { currency: "CAD", demo: true } };
+    const method = (opts.method || "GET").toUpperCase(), u = new URL(url, "http://x"), p = u.pathname;
+    let m;
+    if (method === "GET") {
+      if (p === "/api/config") return D.config;
+      if (p === "/api/events") return D.events;
+      if ((m = p.match(/^\/api\/events\/(.+)$/))) { const e = D.events.find((x) => x.slug === decodeURIComponent(m[1])); if (e) return e; throw new Error("Event not found"); }
+      if (p === "/api/posts") return D.posts.slice(0, Number(u.searchParams.get("limit")) || undefined).map(({ body, ...x }) => x);
+      if ((m = p.match(/^\/api\/posts\/(.+)$/))) {
+        const i = D.posts.findIndex((x) => x.slug === decodeURIComponent(m[1]));
+        if (i < 0) throw new Error("Post not found");
+        const strip = (x) => x && (({ body, ...y }) => y)(x);
+        return { ...D.posts[i], newer: strip(D.posts[i - 1]), older: strip(D.posts[i + 1]) };
+      }
+    }
+    throw new Error(PREVIEW_MSG);
+  }
+  if (FILE) {
+    // Rewrite site links (including ones added later, like event cards) as they're clicked.
+    document.addEventListener("click", (e) => {
+      const a = e.target.closest && e.target.closest('a[href^="/"]');
+      if (!a || a.target === "_blank") return;
+      e.preventDefault(); location.href = fileHref(a.getAttribute("href"));
+    });
+    document.addEventListener("DOMContentLoaded", () => {
+      if (document.body.dataset.bare) return;
+      const bar = document.createElement("div");
+      bar.className = "preview-bar";
+      bar.innerHTML = "<b>Preview</b> · opened from your computer. Buying tickets, booking and sign-ups work on the live site.";
+      document.body.append(bar);
+    });
+  }
   const links = [["events", "/events", "Events"], ["tickets", "/events#upcoming", "Tickets"], ["blog", "/blog", "Blog"], ["contact", "/contact", "Contact"], ["wildsoja", "/wildsoja", "Wild Soja", "soja"]];
 
   const bare = !!document.body.dataset.bare;
   const nav = document.createElement("header");
   nav.className = "nav" + (document.body.dataset.solidNav ? " solid" : "");
   nav.innerHTML = `<div class="wrap">
-    <a class="brand" href="/" aria-label="Wild Nation home"><img src="/img/logo.webp" alt="Wild Nation" width="58" height="40"></a>
+    <a class="brand" href="/" aria-label="Wild Nation home"><img src="img/logo.webp" alt="Wild Nation" width="58" height="40"></a>
     <button class="nav-toggle" aria-expanded="false" aria-controls="navlinks">Menu</button>
     <nav class="nav-links" id="navlinks">${links.map(([k, h, t, c]) => `<a href="${h}" class="${c || ""}" ${k === page ? 'aria-current="page"' : ""}>${t}</a>`).join("")}
       <a class="btn sm" href="/events#upcoming" style="margin-left:8px">Get tickets</a></nav></div>`;
@@ -54,6 +104,7 @@ window.WN = (function () {
   const money = (cents, cur) => new Intl.NumberFormat("en-CA", { style: "currency", currency: cur || currency, maximumFractionDigits: cents % 100 ? 2 : 0 }).format(cents / 100);
   const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
   async function api(url, opts = {}) {
+    if (FILE) return previewApi(url, opts);
     const r = await fetch(url, { ...opts, headers: { "Content-Type": "application/json", ...(opts.headers || {}) }, body: opts.body && typeof opts.body !== "string" ? JSON.stringify(opts.body) : opts.body });
     const j = await r.json().catch(() => ({}));
     if (!r.ok) throw new Error(j.error || "Something went wrong");
@@ -118,5 +169,5 @@ window.WN = (function () {
   // Equalizers
   document.querySelectorAll(".eq[data-bars]").forEach((eq) => { for (let i = 0; i < +eq.dataset.bars; i++) { const b = document.createElement("i"); b.style.animationDelay = (-Math.random()).toFixed(2) + "s"; b.style.animationDuration = (0.45 + Math.random() * 0.8).toFixed(2) + "s"; eq.append(b); } });
 
-  return { BRAND, api, money, esc, eventCard, loadEvents, reveal, toast, dateParts, setCurrency: (c) => (currency = c) };
+  return { BRAND, api, money, esc, eventCard, loadEvents, reveal, toast, dateParts, setCurrency: (c) => (currency = c), FILE, fileHref };
 })();
